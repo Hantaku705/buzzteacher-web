@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 import { detectPlatform, extractVideoUrl } from '@/lib/utils/platform'
 import { getTikTokInsight, downloadTikTokVideo } from '@/lib/api/tiktok'
 import { analyzeVideoWithGemini, analyzeYouTubeWithGemini } from '@/lib/api/gemini'
@@ -33,33 +34,57 @@ export async function POST(req: NextRequest) {
 
     const systemPrompt = buildSystemPrompt(knowledgeSummary, analysisContext, creatorInfo)
 
-    // Call OpenAI API directly using fetch
-    const apiKey = process.env.OPENAI_API_KEY
+    // Call Gemini API
+    const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) {
-      return new Response('OpenAI API key not configured', { status: 500 })
+      return new Response(JSON.stringify({ error: 'GEMINI_API_KEY が設定されていません' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      })
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: [{ role: 'system', content: systemPrompt }, ...messages],
-        stream: true,
-      }),
+    const genAI = new GoogleGenerativeAI(apiKey)
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+
+    // Convert messages to Gemini format
+    const history = messages.slice(0, -1).map((m: { role: string; content: string }) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }))
+
+    const chat = model.startChat({
+      history,
+      systemInstruction: systemPrompt,
     })
 
-    if (!response.ok) {
-      const error = await response.text()
-      console.error('OpenAI API error:', error)
-      return new Response('OpenAI API error', { status: 500 })
-    }
+    // Stream response
+    const result = await chat.sendMessageStream(userInput)
 
-    // Forward the stream directly
-    return new Response(response.body, {
+    // Create a readable stream for the response
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const chunk of result.stream) {
+            const text = chunk.text()
+            if (text) {
+              // Format as SSE for compatibility with existing frontend
+              const data = JSON.stringify({
+                choices: [{ delta: { content: text } }]
+              })
+              controller.enqueue(encoder.encode(`data: ${data}\n\n`))
+            }
+          }
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+          controller.close()
+        } catch (error) {
+          console.error('Stream error:', error)
+          controller.error(error)
+        }
+      },
+    })
+
+    return new Response(stream, {
       status: 200,
       headers: {
         'Content-Type': 'text/event-stream',
@@ -69,7 +94,11 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     console.error('Chat API error:', error)
-    return new Response('Internal Server Error', { status: 500 })
+    const message = error instanceof Error ? error.message : '不明なエラー'
+    return new Response(JSON.stringify({ error: `サーバーエラー: ${message}` }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    })
   }
 }
 
