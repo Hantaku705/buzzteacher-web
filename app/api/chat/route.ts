@@ -1,6 +1,4 @@
 import { NextRequest } from 'next/server'
-import { streamText } from 'ai'
-import { openai } from '@ai-sdk/openai'
 import { detectPlatform, extractVideoUrl } from '@/lib/utils/platform'
 import { getTikTokInsight, downloadTikTokVideo } from '@/lib/api/tiktok'
 import { analyzeVideoWithGemini, analyzeYouTubeWithGemini } from '@/lib/api/gemini'
@@ -28,14 +26,40 @@ export async function POST(req: NextRequest) {
     const knowledgeSummary = getKnowledgeSummary()
     const systemPrompt = buildSystemPrompt(knowledgeSummary, analysisContext)
 
-    // Stream response
-    const result = streamText({
-      model: openai('gpt-4o'),
-      system: systemPrompt,
-      messages,
+    // Call OpenAI API directly using fetch
+    const apiKey = process.env.OPENAI_API_KEY
+    if (!apiKey) {
+      return new Response('OpenAI API key not configured', { status: 500 })
+    }
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [{ role: 'system', content: systemPrompt }, ...messages],
+        stream: true,
+      }),
     })
 
-    return result.toTextStreamResponse()
+    if (!response.ok) {
+      const error = await response.text()
+      console.error('OpenAI API error:', error)
+      return new Response('OpenAI API error', { status: 500 })
+    }
+
+    // Forward the stream directly
+    return new Response(response.body, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+      },
+    })
   } catch (error) {
     console.error('Chat API error:', error)
     return new Response('Internal Server Error', { status: 500 })
