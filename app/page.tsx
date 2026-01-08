@@ -3,11 +3,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { ChatInput } from '@/components/chat/ChatInput'
 import { MessageList } from '@/components/chat/MessageList'
+import { CreatorSelector } from '@/components/chat/CreatorSelector'
 import { Message } from '@/lib/types'
+import { AVAILABLE_CREATORS } from '@/lib/knowledge/loader'
 
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [selectedCreator, setSelectedCreator] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -52,6 +55,7 @@ export default function Home() {
             role: m.role,
             content: m.content,
           })),
+          creator: selectedCreator,
         }),
       })
 
@@ -116,11 +120,19 @@ export default function Home() {
     }
   }
 
+  const selectedCreatorInfo = selectedCreator
+    ? AVAILABLE_CREATORS.find(c => c.id === selectedCreator)
+    : null
+
   return (
     <div className="flex flex-col h-screen bg-[#343541]">
       {/* Header */}
-      <header className="flex items-center justify-center py-3 border-b border-gray-700">
+      <header className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
         <h1 className="text-lg font-semibold text-white">BuzzTeacher</h1>
+        <CreatorSelector
+          selectedCreator={selectedCreator}
+          onSelect={setSelectedCreator}
+        />
       </header>
 
       {/* Messages */}
@@ -129,11 +141,16 @@ export default function Home() {
           <div className="flex flex-col items-center justify-center h-full text-gray-400">
             <div className="text-4xl mb-4">🎬</div>
             <h2 className="text-2xl font-bold text-white mb-2">BuzzTeacher</h2>
-            <p className="text-center max-w-md">
+            <p className="text-center max-w-md mb-4">
               動画URLを送信すると、バズのプロが分析・アドバイスします。
               <br />
               TikTok, Instagram, YouTube, X に対応しています。
             </p>
+            {selectedCreatorInfo && (
+              <p className="text-emerald-400 text-sm">
+                「{selectedCreatorInfo.name}」の視点でアドバイスします
+              </p>
+            )}
           </div>
         ) : (
           <MessageList messages={messages} />

@@ -1,9 +1,14 @@
 import { InsightData } from '@/lib/types'
 import { extractTikTokId } from '@/lib/utils/platform'
 
-const RAPIDAPI_KEY = process.env.TIKTOK_RAPIDAPI_KEY || ''
+const RAPIDAPI_KEY = process.env.TIKTOK_RAPIDAPI_KEY
 
 export async function getTikTokInsight(url: string): Promise<InsightData | null> {
+  if (!RAPIDAPI_KEY) {
+    console.error('TIKTOK_RAPIDAPI_KEY is not configured')
+    return null
+  }
+
   const videoId = extractTikTokId(url)
   if (!videoId) {
     console.error('Failed to extract TikTok video ID from URL:', url)
@@ -48,6 +53,11 @@ export async function getTikTokInsight(url: string): Promise<InsightData | null>
 }
 
 export async function downloadTikTokVideo(url: string): Promise<Buffer | null> {
+  if (!RAPIDAPI_KEY) {
+    console.error('TIKTOK_RAPIDAPI_KEY is not configured')
+    return null
+  }
+
   try {
     const res = await fetch(
       `https://tiktok-video-downloader-api.p.rapidapi.com/media?videoUrl=${encodeURIComponent(url)}`,

@@ -2,11 +2,11 @@ import { NextRequest } from 'next/server'
 import { detectPlatform, extractVideoUrl } from '@/lib/utils/platform'
 import { getTikTokInsight, downloadTikTokVideo } from '@/lib/api/tiktok'
 import { analyzeVideoWithGemini, analyzeYouTubeWithGemini } from '@/lib/api/gemini'
-import { getKnowledgeSummary } from '@/lib/knowledge/loader'
+import { getKnowledgeSummary, getCreatorSummary, AVAILABLE_CREATORS, CreatorInfo } from '@/lib/knowledge/loader'
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages } = await req.json()
+    const { messages, creator } = await req.json()
     const lastMessage = messages[messages.length - 1]
     const userInput = lastMessage.content
 
@@ -22,9 +22,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Build system prompt
-    const knowledgeSummary = getKnowledgeSummary()
-    const systemPrompt = buildSystemPrompt(knowledgeSummary, analysisContext)
+    // Build system prompt with selected creator's knowledge
+    const knowledgeSummary = creator
+      ? getCreatorSummary(creator)
+      : getKnowledgeSummary()
+
+    const creatorInfo = creator
+      ? AVAILABLE_CREATORS.find(c => c.id === creator) || null
+      : null
+
+    const systemPrompt = buildSystemPrompt(knowledgeSummary, analysisContext, creatorInfo)
 
     // Call OpenAI API directly using fetch
     const apiKey = process.env.OPENAI_API_KEY
@@ -68,6 +75,7 @@ export async function POST(req: NextRequest) {
 
 async function analyzeVideo(url: string, platform: string): Promise<string> {
   let context = `\n\n## 分析対象動画\n- URL: ${url}\n- プラットフォーム: ${platform}\n`
+  const errors: string[] = []
 
   try {
     if (platform === 'TikTok') {
@@ -81,6 +89,8 @@ async function analyzeVideo(url: string, platform: string): Promise<string> {
         context += `- シェア: ${insight.share?.toLocaleString() || '取得できず'}\n`
         context += `- 保存: ${insight.save?.toLocaleString() || '取得できず'}\n`
         context += `- 動画時間: ${insight.durationSec || '不明'}秒\n`
+      } else {
+        errors.push('TikTokインサイトの取得に失敗しました（APIキー未設定または動画が非公開）')
       }
 
       // Download and analyze
@@ -89,24 +99,47 @@ async function analyzeVideo(url: string, platform: string): Promise<string> {
         const analysis = await analyzeVideoWithGemini(videoBuffer)
         if (analysis) {
           context += `\n### Gemini動画分析結果\n${analysis}\n`
+        } else {
+          errors.push('動画の内容分析に失敗しました（Gemini APIエラー）')
         }
+      } else {
+        errors.push('動画のダウンロードに失敗しました')
       }
     } else if (platform === 'YouTube') {
       const analysis = await analyzeYouTubeWithGemini(url)
       if (analysis) {
         context += `\n### Gemini動画分析結果\n${analysis}\n`
+      } else {
+        errors.push('YouTube動画の分析に失敗しました（Gemini APIエラー）')
       }
+    } else if (platform === 'Instagram' || platform === 'X') {
+      errors.push(`${platform}は現在動画分析に対応していません（URLのみ認識）`)
     }
   } catch (error) {
     console.error('Video analysis error:', error)
-    context += `\n※ 動画分析中にエラーが発生しました\n`
+    errors.push('動画分析中に予期せぬエラーが発生しました')
+  }
+
+  // エラーがあれば追記
+  if (errors.length > 0) {
+    context += `\n### ⚠️ 分析の制限事項\n${errors.map(e => `- ${e}`).join('\n')}\n`
+    context += `\n※ 上記の情報のみでアドバイスを行います。\n`
   }
 
   return context
 }
 
-function buildSystemPrompt(knowledge: string, analysisContext: string): string {
-  return `あなたは「BuzzTeacher」、バズ動画のプロフェッショナルAIアシスタントです。
+function buildSystemPrompt(
+  knowledge: string,
+  analysisContext: string,
+  creatorInfo: CreatorInfo | null
+): string {
+  const roleDescription = creatorInfo
+    ? `あなたは「${creatorInfo.name}」の視点でアドバイスするBuzzTeacherです。
+${creatorInfo.description}の観点から、具体的な改善点を提案してください。`
+    : 'あなたは「BuzzTeacher」、バズ動画のプロフェッショナルAIアシスタントです。'
+
+  return `${roleDescription}
 
 ## あなたの役割
 ショート動画をバズらせるための具体的なアドバイスを提供します。

@@ -4,17 +4,36 @@ import { writeFile, unlink, mkdir } from 'fs/promises'
 import { join } from 'path'
 import { tmpdir } from 'os'
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || ''
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
-const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+// 遅延初期化でエラーを防ぐ
+function getModel() {
+  if (!GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY is not configured')
+  }
+  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
+  return genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+}
+
+function getFileManager() {
+  if (!GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY is not configured')
+  }
+  return new GoogleAIFileManager(GEMINI_API_KEY)
+}
 
 export async function analyzeVideoWithGemini(
   videoBuffer: Buffer,
   mimeType: string = 'video/mp4'
 ): Promise<string | null> {
+  if (!GEMINI_API_KEY) {
+    console.error('GEMINI_API_KEY is not configured')
+    return null
+  }
+
   try {
-    const fileManager = new GoogleAIFileManager(GEMINI_API_KEY)
+    const fileManager = getFileManager()
+    const model = getModel()
 
     // Save to temp file
     const tempDir = join(tmpdir(), 'buzzteacher')
@@ -40,7 +59,7 @@ export async function analyzeVideoWithGemini(
     }
 
     // Analyze
-    const result = await model.generateContent([
+    const result = await getModel().generateContent([
       {
         fileData: {
           mimeType,
@@ -63,8 +82,13 @@ export async function analyzeVideoWithGemini(
 }
 
 export async function analyzeYouTubeWithGemini(youtubeUrl: string): Promise<string | null> {
+  if (!GEMINI_API_KEY) {
+    console.error('GEMINI_API_KEY is not configured')
+    return null
+  }
+
   try {
-    const result = await model.generateContent([
+    const result = await getModel().generateContent([
       {
         text: `以下のYouTube動画を分析してください。\n動画URL: ${youtubeUrl}\n\n${ANALYSIS_PROMPT}`,
       },
