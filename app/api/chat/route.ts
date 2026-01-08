@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
     const chat = model.startChat({
       history,
       systemInstruction: {
+        role: 'user',
         parts: [{ text: systemPrompt }],
       },
     })
