@@ -24,13 +24,16 @@ export function MessageItem({ message }: MessageItemProps) {
         {/* Content */}
         <div className="flex-1 text-gray-100 leading-relaxed whitespace-pre-wrap">
           {message.content || (
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
-                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                </div>
+                <span className="text-emerald-400 text-sm font-medium">動画を分析中...</span>
               </div>
-              <span className="text-gray-400 text-sm">分析中...</span>
+              <span className="text-gray-500 text-xs">動画のダウンロードと分析には30秒〜1分ほどかかります</span>
             </div>
           )}
         </div>
