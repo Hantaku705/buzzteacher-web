@@ -80,45 +80,77 @@ export function Sidebar({
           </button>
         </div>
 
-        {/* Search */}
-        <div className="px-2 pb-2">
-          <div className="relative">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-              />
-            </svg>
-            <input
-              type="text"
-              placeholder="チャットを検索"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#2a2b32] text-white text-sm pl-9 pr-3 py-2 rounded-lg border border-transparent focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none placeholder-gray-400"
-            />
-          </div>
-        </div>
+        {/* Content area - differs based on auth state */}
+        {user ? (
+          <>
+            {/* Search */}
+            <div className="px-2 pb-2">
+              <div className="relative">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
+                  />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="チャットを検索"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-[#2a2b32] text-white text-sm pl-9 pr-3 py-2 rounded-lg border border-transparent focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none placeholder-gray-400"
+                />
+              </div>
+            </div>
 
-        {/* Conversation List */}
-        <div className="flex-1 overflow-y-auto">
-          <ConversationList
-            conversations={filteredConversations}
-            currentConversationId={currentConversationId}
-            onSelect={(id) => {
-              onSelectConversation(id)
-              onClose()
-            }}
-            onDelete={onDeleteConversation}
-          />
-        </div>
+            {/* Conversation List */}
+            <div className="flex-1 overflow-y-auto">
+              <ConversationList
+                conversations={filteredConversations}
+                currentConversationId={currentConversationId}
+                onSelect={(id) => {
+                  onSelectConversation(id)
+                  onClose()
+                }}
+                onDelete={onDeleteConversation}
+              />
+            </div>
+          </>
+        ) : (
+          /* Guest mode - show login prompt */
+          <div className="flex-1 flex flex-col items-center justify-center px-4">
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-emerald-600/20 flex items-center justify-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="w-6 h-6 text-emerald-500"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                  />
+                </svg>
+              </div>
+              <p className="text-gray-400 text-sm mb-4">
+                ログインすると
+                <br />
+                履歴が保存されます
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* User Profile */}
         <UserProfile user={user} onLogout={onLogout} />

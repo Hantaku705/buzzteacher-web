@@ -162,9 +162,9 @@ export default function Home() {
     setMessages((prev) => [...prev, userMessage])
     setIsLoading(true)
 
-    // Create or get conversation
+    // Create or get conversation (only for authenticated users)
     let convId = currentConversationId
-    if (!convId) {
+    if (user && !convId) {
       try {
         const response = await fetch('/api/conversations', {
           method: 'POST',
@@ -182,8 +182,8 @@ export default function Home() {
       }
     }
 
-    // Save user message
-    if (convId) {
+    // Save user message (only for authenticated users)
+    if (user && convId) {
       await saveMessage(convId, 'user', content)
     }
 
@@ -315,7 +315,8 @@ export default function Home() {
         }
       }
 
-      if (convId && fullContent) {
+      // Save assistant message (only for authenticated users)
+      if (user && convId && fullContent) {
         await saveMessage(convId, 'assistant', fullContent)
         await loadConversations()
       }

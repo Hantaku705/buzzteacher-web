@@ -11,7 +11,33 @@ interface UserProfileProps {
 export function UserProfile({ user, onLogout }: UserProfileProps) {
   const [menuOpen, setMenuOpen] = useState(false)
 
-  if (!user) return null
+  // Guest mode - show login button
+  if (!user) {
+    return (
+      <div className="border-t border-gray-700 p-2">
+        <a
+          href="/auth/login"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 transition-colors text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-[#202123]"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="w-4 h-4"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+            />
+          </svg>
+          ログイン
+        </a>
+      </div>
+    )
+  }
 
   return (
     <div className="relative border-t border-gray-700 p-2">

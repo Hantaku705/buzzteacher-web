@@ -51,8 +51,24 @@ export default function LoginPage() {
           Googleでログイン
         </button>
 
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-600"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-[#40414f] text-gray-400">または</span>
+          </div>
+        </div>
+
+        <a
+          href="/"
+          className="w-full block text-center py-3 px-4 rounded-lg border border-gray-600 text-gray-300 hover:bg-[#2a2b32] transition-colors"
+        >
+          ログインせずに使う
+        </a>
+
         <p className="text-gray-500 text-xs text-center mt-6">
-          ログインすることで、チャット履歴が保存されます
+          ログインすると、チャット履歴が保存されます
         </p>
       </div>
     </div>
