@@ -10,12 +10,14 @@ import { createClient } from '@/lib/supabase/client'
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [loadingStage, setLoadingStage] = useState<string | null>(null)
   const [selectedCreators, setSelectedCreators] = useState<string[]>(['doshirouto'])
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [isInitializing, setIsInitializing] = useState(true)
+  const [showShortcuts, setShowShortcuts] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
 
@@ -26,6 +28,29 @@ export default function Home() {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+Shift+C or Ctrl+Shift+C - New Chat
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'c') {
+        e.preventDefault()
+        handleNewChat()
+      }
+      // Cmd+/ or Ctrl+/ - Show shortcuts
+      if ((e.metaKey || e.ctrlKey) && e.key === '/') {
+        e.preventDefault()
+        setShowShortcuts(prev => !prev)
+      }
+      // Escape - Close shortcuts modal
+      if (e.key === 'Escape' && showShortcuts) {
+        setShowShortcuts(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [showShortcuts])
 
   // Initialize user and conversations
   useEffect(() => {
@@ -220,7 +245,9 @@ export default function Home() {
             try {
               const json = JSON.parse(data)
 
-              if (json.type === 'creator_start') {
+              if (json.type === 'progress') {
+                setLoadingStage(json.stage)
+              } else if (json.type === 'creator_start') {
                 currentSection = {
                   creatorId: json.creatorId,
                   creatorName: json.name,
@@ -303,8 +330,35 @@ export default function Home() {
       )
     } finally {
       setIsLoading(false)
+      setLoadingStage(null)
     }
   }
+
+  const handleRegenerate = useCallback(() => {
+    // Find the last user message
+    const lastUserMessageIndex = messages.map(m => m.role).lastIndexOf('user')
+    if (lastUserMessageIndex === -1) return
+
+    const lastUserMessage = messages[lastUserMessageIndex]
+
+    // Remove the last assistant message
+    setMessages(prev => prev.slice(0, -1))
+
+    // Resend the last user message
+    handleSendMessage(lastUserMessage.content)
+  }, [messages])
+
+  const handleEditMessage = useCallback((messageId: string, newContent: string) => {
+    // Find the message index
+    const messageIndex = messages.findIndex(m => m.id === messageId)
+    if (messageIndex === -1) return
+
+    // Remove all messages from the edited message onwards
+    setMessages(prev => prev.slice(0, messageIndex))
+
+    // Send the edited content as a new message
+    handleSendMessage(newContent)
+  }, [messages])
 
   if (isInitializing) {
     return (
@@ -316,6 +370,62 @@ export default function Home() {
 
   return (
     <div className="flex h-screen bg-[#343541]">
+      {/* Shortcuts Modal */}
+      {showShortcuts && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-fade-in"
+          onClick={() => setShowShortcuts(false)}
+        >
+          <div
+            className="bg-[#40414f] rounded-lg p-6 max-w-md w-full mx-4 animate-fade-in-up"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-white">キーボードショートカット</h2>
+              <button
+                onClick={() => setShowShortcuts(false)}
+                className="text-gray-400 hover:text-white p-1 focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-300">新規チャット</span>
+                <div className="flex gap-1">
+                  <kbd className="px-2 py-1 bg-gray-700 rounded text-xs text-gray-300">⌘</kbd>
+                  <kbd className="px-2 py-1 bg-gray-700 rounded text-xs text-gray-300">⇧</kbd>
+                  <kbd className="px-2 py-1 bg-gray-700 rounded text-xs text-gray-300">C</kbd>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-300">ショートカット一覧</span>
+                <div className="flex gap-1">
+                  <kbd className="px-2 py-1 bg-gray-700 rounded text-xs text-gray-300">⌘</kbd>
+                  <kbd className="px-2 py-1 bg-gray-700 rounded text-xs text-gray-300">/</kbd>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-300">メッセージ送信</span>
+                <div className="flex gap-1">
+                  <kbd className="px-2 py-1 bg-gray-700 rounded text-xs text-gray-300">Enter</kbd>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-300">改行</span>
+                <div className="flex gap-1">
+                  <kbd className="px-2 py-1 bg-gray-700 rounded text-xs text-gray-300">⇧</kbd>
+                  <kbd className="px-2 py-1 bg-gray-700 rounded text-xs text-gray-300">Enter</kbd>
+                </div>
+              </div>
+            </div>
+            <p className="text-gray-500 text-xs mt-4">Windows/Linuxでは ⌘ の代わりに Ctrl を使用</p>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar */}
       <Sidebar
         conversations={conversations}
@@ -371,7 +481,13 @@ export default function Home() {
               </p>
             </div>
           ) : (
-            <MessageList messages={messages} />
+            <MessageList
+              messages={messages}
+              onRegenerate={handleRegenerate}
+              onEdit={handleEditMessage}
+              isLoading={isLoading}
+              loadingStage={loadingStage}
+            />
           )}
           <div ref={messagesEndRef} />
         </main>

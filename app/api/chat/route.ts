@@ -13,15 +13,7 @@ export async function POST(req: NextRequest) {
 
     // Check if user sent a video URL
     const videoUrl = extractVideoUrl(userInput)
-    let analysisContext = ''
-
-    if (videoUrl) {
-      const platform = detectPlatform(videoUrl)
-
-      if (platform) {
-        analysisContext = await analyzeVideo(videoUrl, platform)
-      }
-    }
+    const platform = videoUrl ? detectPlatform(videoUrl) : null
 
     const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) {
@@ -47,26 +39,39 @@ export async function POST(req: NextRequest) {
       ? creators
       : ['doshirouto']
 
+    // Helper to send progress events
+    const sendProgress = (controller: ReadableStreamDefaultController, stage: string) => {
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'progress', stage })}\n\n`))
+    }
+
     // Single creator: use simple streaming (backward compatible)
     if (creatorsToAnalyze.length === 1) {
       const creatorId = creatorsToAnalyze[0]
       const knowledgeSummary = getCreatorSummary(creatorId)
       const creatorInfo = AVAILABLE_CREATORS.find(c => c.id === creatorId) || null
-      const systemPrompt = buildSystemPrompt(knowledgeSummary, analysisContext, creatorInfo)
-
-      const chat = model.startChat({
-        history,
-        systemInstruction: {
-          role: 'user',
-          parts: [{ text: systemPrompt }],
-        },
-      })
-
-      const result = await chat.sendMessageStream(userInput)
 
       const stream = new ReadableStream({
         async start(controller) {
           try {
+            // Analyze video with progress updates
+            let analysisContext = ''
+            if (videoUrl && platform) {
+              analysisContext = await analyzeVideoWithProgress(videoUrl, platform, (stage) => sendProgress(controller, stage))
+            }
+
+            sendProgress(controller, 'アドバイスを生成中...')
+
+            const systemPrompt = buildSystemPrompt(knowledgeSummary, analysisContext, creatorInfo)
+            const chat = model.startChat({
+              history,
+              systemInstruction: {
+                role: 'user',
+                parts: [{ text: systemPrompt }],
+              },
+            })
+
+            const result = await chat.sendMessageStream(userInput)
+
             for await (const chunk of result.stream) {
               const text = chunk.text()
               if (text) {
@@ -99,6 +104,12 @@ export async function POST(req: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
+          // Analyze video with progress updates (only once for all creators)
+          let analysisContext = ''
+          if (videoUrl && platform) {
+            analysisContext = await analyzeVideoWithProgress(videoUrl, platform, (stage) => sendProgress(controller, stage))
+          }
+
           for (const creatorId of creatorsToAnalyze) {
             const creatorInfo = AVAILABLE_CREATORS.find(c => c.id === creatorId)
             if (!creatorInfo) continue
@@ -176,12 +187,17 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function analyzeVideo(url: string, platform: string): Promise<string> {
+async function analyzeVideoWithProgress(
+  url: string,
+  platform: string,
+  onProgress: (stage: string) => void
+): Promise<string> {
   let context = `\n\n## 分析対象動画\n- URL: ${url}\n- プラットフォーム: ${platform}\n`
   const errors: string[] = []
 
   try {
     if (platform === 'TikTok') {
+      onProgress('TikTokインサイトを取得中...')
       const insight = await getTikTokInsight(url)
       if (insight) {
         context += `\n### インサイト\n`
@@ -195,8 +211,10 @@ async function analyzeVideo(url: string, platform: string): Promise<string> {
         errors.push('TikTokインサイトの取得に失敗しました（APIキー未設定または動画が非公開）')
       }
 
+      onProgress('動画をダウンロード中...')
       const videoBuffer = await downloadTikTokVideo(url)
       if (videoBuffer) {
+        onProgress('動画を分析中...')
         const analysis = await analyzeVideoWithGemini(videoBuffer)
         if (analysis) {
           context += `\n### Gemini動画分析結果\n${analysis}\n`
@@ -207,6 +225,7 @@ async function analyzeVideo(url: string, platform: string): Promise<string> {
         errors.push('動画のダウンロードに失敗しました')
       }
     } else if (platform === 'YouTube') {
+      onProgress('YouTube動画を分析中...')
       const analysis = await analyzeYouTubeWithGemini(url)
       if (analysis) {
         context += `\n### Gemini動画分析結果\n${analysis}\n`
@@ -214,6 +233,7 @@ async function analyzeVideo(url: string, platform: string): Promise<string> {
         errors.push('YouTube動画の分析に失敗しました（Gemini APIエラー）')
       }
     } else if (platform === 'Instagram' || platform === 'X') {
+      onProgress(`${platform}のURLを認識しました`)
       errors.push(`${platform}は現在動画分析に対応していません（URLのみ認識）`)
     }
   } catch (error) {

@@ -88,17 +88,18 @@ export function ChatInput({ onSend, isLoading, selectedCreators, onSelectCreator
         onSubmit={handleSubmit}
         className="max-w-3xl mx-auto relative"
       >
-        <div className="relative flex items-end bg-[#40414f] rounded-xl border border-gray-600 shadow-lg">
+        <div className="relative flex items-end bg-[#40414f] rounded-xl border border-gray-600 shadow-lg focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 transition-colors">
           <div className="relative" ref={menuRef}>
             <button
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
-              className={`p-3 transition-colors ${
+              className={`p-3 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-[#40414f] rounded ${
                 selectedCreators.length > 0
                   ? 'text-emerald-400 hover:text-emerald-300'
                   : 'text-gray-400 hover:text-white'
               }`}
               title={selectedCreators.length > 0 ? `審査: ${getSelectedNames()}` : '審査する人を選択'}
+              aria-label="審査する人を選択"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -153,7 +154,7 @@ export function ChatInput({ onSend, isLoading, selectedCreators, onSelectCreator
                       </div>
                       <div className="flex-1">
                         <div>{creator.name}</div>
-                        <div className="text-xs text-gray-500">{creator.description}</div>
+                        <div className="text-xs text-gray-400">{creator.description}</div>
                       </div>
                     </button>
                   )
@@ -175,7 +176,8 @@ export function ChatInput({ onSend, isLoading, selectedCreators, onSelectCreator
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className="absolute right-2 bottom-2 p-2 text-gray-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="absolute right-2 bottom-2 p-2 text-gray-400 hover:text-white disabled:text-gray-600 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded"
+            aria-label="送信"
           >
             {isLoading ? (
               <svg
@@ -224,7 +226,7 @@ export function ChatInput({ onSend, isLoading, selectedCreators, onSelectCreator
               「{getSelectedNames()}」の視点でアドバイスします
             </span>
           ) : (
-            <span className="text-gray-500">
+            <span className="text-gray-400">
               審査する人を選択してください
             </span>
           )}

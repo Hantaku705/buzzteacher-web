@@ -17,7 +17,7 @@ export function UserProfile({ user, onLogout }: UserProfileProps) {
     <div className="relative border-t border-gray-700 p-2">
       <button
         onClick={() => setMenuOpen(!menuOpen)}
-        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#2a2b32] transition-colors"
+        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#2a2b32] transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500"
       >
         {user.avatar_url ? (
           <img
@@ -64,7 +64,7 @@ export function UserProfile({ user, onLogout }: UserProfileProps) {
                 onLogout()
                 setMenuOpen(false)
               }}
-              className="w-full px-4 py-2 text-left text-sm text-white hover:bg-[#40414f] flex items-center gap-2"
+              className="w-full px-4 py-2 text-left text-sm text-white hover:bg-[#40414f] flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-inset"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

@@ -60,7 +60,7 @@ export function Sidebar({
               onNewChat()
               onClose()
             }}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg border border-gray-600 hover:bg-[#2a2b32] transition-colors text-white"
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-lg border border-gray-600 hover:bg-[#2a2b32] transition-colors text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-[#202123]"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -102,7 +102,7 @@ export function Sidebar({
               placeholder="チャットを検索"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#2a2b32] text-white text-sm pl-9 pr-3 py-2 rounded-lg border border-transparent focus:border-gray-600 focus:outline-none placeholder-gray-500"
+              className="w-full bg-[#2a2b32] text-white text-sm pl-9 pr-3 py-2 rounded-lg border border-transparent focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 focus:outline-none placeholder-gray-400"
             />
           </div>
         </div>

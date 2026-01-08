@@ -26,6 +26,7 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-markdown": "^10.1.0",
+    "react-syntax-highlighter": "^16.1.0",
     "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
@@ -33,6 +34,8 @@
     "@types/node": "^25.0.3",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "@types/react-syntax-highlighter": "^15.5.13",
+    "playwright": "^1.57.0",
     "typescript": "^5.9.3"
   }
 }

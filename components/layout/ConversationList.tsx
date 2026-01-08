@@ -54,7 +54,7 @@ export function ConversationList({
 
   if (conversations.length === 0) {
     return (
-      <div className="p-4 text-center text-gray-500 text-sm">
+      <div className="p-4 text-center text-gray-400 text-sm">
         チャット履歴がありません
       </div>
     )
@@ -64,7 +64,7 @@ export function ConversationList({
     <div className="px-2">
       {groups.map((group) => (
         <div key={group.label} className="mb-4">
-          <div className="px-3 py-2 text-xs text-gray-500 font-medium">
+          <div className="px-3 py-2 text-xs text-gray-400 font-medium">
             {group.label}
           </div>
           {group.items.map((conv) => (
@@ -104,7 +104,8 @@ export function ConversationList({
                   e.stopPropagation()
                   setMenuOpenId(menuOpenId === conv.id ? null : conv.id)
                 }}
-                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[#40414f] rounded transition-opacity"
+                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[#40414f] rounded transition-opacity focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                aria-label="メニューを開く"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -131,7 +132,7 @@ export function ConversationList({
                       onDelete(conv.id)
                       setMenuOpenId(null)
                     }}
-                    className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-[#40414f] flex items-center gap-2"
+                    className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-[#40414f] flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-inset"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
