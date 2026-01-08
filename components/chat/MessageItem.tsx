@@ -24,11 +24,14 @@ export function MessageItem({ message }: MessageItemProps) {
         {/* Content */}
         <div className="flex-1 text-gray-100 leading-relaxed whitespace-pre-wrap">
           {message.content || (
-            <span className="inline-flex items-center">
-              <span className="animate-pulse">●</span>
-              <span className="animate-pulse delay-100">●</span>
-              <span className="animate-pulse delay-200">●</span>
-            </span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+              </div>
+              <span className="text-gray-400 text-sm">分析中...</span>
+            </div>
           )}
         </div>
       </div>
