@@ -1,17 +1,23 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { ChatInput } from '@/components/chat/ChatInput'
 import { MessageList } from '@/components/chat/MessageList'
-import { CreatorSelector } from '@/components/chat/CreatorSelector'
-import { Message } from '@/lib/types'
-import { AVAILABLE_CREATORS } from '@/lib/knowledge/loader'
+import { Sidebar } from '@/components/layout/Sidebar'
+import { Message, Conversation, User, CreatorSection } from '@/lib/types'
+import { createClient } from '@/lib/supabase/client'
 
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [selectedCreator, setSelectedCreator] = useState<string | null>(null)
+  const [selectedCreators, setSelectedCreators] = useState<string[]>(['doshirouto'])
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const supabase = createClient()
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -20,6 +26,103 @@ export default function Home() {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
+
+  // Initialize user and conversations
+  useEffect(() => {
+    async function init() {
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        if (authUser) {
+          setUser({
+            id: authUser.id,
+            email: authUser.email || '',
+            display_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || '',
+            avatar_url: authUser.user_metadata?.avatar_url || null,
+          })
+          await loadConversations()
+        }
+      } catch (error) {
+        console.error('Init error:', error)
+      } finally {
+        setIsInitializing(false)
+      }
+    }
+    init()
+  }, [])
+
+  const loadConversations = useCallback(async () => {
+    try {
+      const response = await fetch('/api/conversations')
+      if (response.ok) {
+        const data = await response.json()
+        setConversations(data)
+      }
+    } catch (error) {
+      console.error('Failed to load conversations:', error)
+    }
+  }, [])
+
+  const loadConversation = useCallback(async (id: string) => {
+    try {
+      const response = await fetch(`/api/conversations/${id}`)
+      if (response.ok) {
+        const data = await response.json()
+        setMessages(
+          data.messages?.map((m: { id: string; role: 'user' | 'assistant'; content: string; created_at: string }) => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            createdAt: new Date(m.created_at),
+          })) || []
+        )
+        setCurrentConversationId(id)
+      }
+    } catch (error) {
+      console.error('Failed to load conversation:', error)
+    }
+  }, [])
+
+  const handleNewChat = useCallback(() => {
+    setMessages([])
+    setCurrentConversationId(null)
+  }, [])
+
+  const handleSelectConversation = useCallback(async (id: string) => {
+    await loadConversation(id)
+  }, [loadConversation])
+
+  const handleDeleteConversation = useCallback(async (id: string) => {
+    try {
+      const response = await fetch(`/api/conversations/${id}`, {
+        method: 'DELETE',
+      })
+      if (response.ok) {
+        setConversations((prev) => prev.filter((c) => c.id !== id))
+        if (currentConversationId === id) {
+          handleNewChat()
+        }
+      }
+    } catch (error) {
+      console.error('Failed to delete conversation:', error)
+    }
+  }, [currentConversationId, handleNewChat])
+
+  const handleLogout = useCallback(async () => {
+    await supabase.auth.signOut()
+    window.location.href = '/auth/login'
+  }, [supabase.auth])
+
+  const saveMessage = useCallback(async (conversationId: string, role: 'user' | 'assistant', content: string) => {
+    try {
+      await fetch(`/api/conversations/${conversationId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role, content }),
+      })
+    } catch (error) {
+      console.error('Failed to save message:', error)
+    }
+  }, [])
 
   const handleSendMessage = async (content: string) => {
     if (!content.trim() || isLoading) return
@@ -34,6 +137,31 @@ export default function Home() {
     setMessages((prev) => [...prev, userMessage])
     setIsLoading(true)
 
+    // Create or get conversation
+    let convId = currentConversationId
+    if (!convId) {
+      try {
+        const response = await fetch('/api/conversations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: content.slice(0, 50) }),
+        })
+        if (response.ok) {
+          const newConv = await response.json()
+          convId = newConv.id
+          setCurrentConversationId(convId)
+          setConversations((prev) => [newConv, ...prev])
+        }
+      } catch (error) {
+        console.error('Failed to create conversation:', error)
+      }
+    }
+
+    // Save user message
+    if (convId) {
+      await saveMessage(convId, 'user', content)
+    }
+
     // Create placeholder for assistant message
     const assistantMessageId = (Date.now() + 1).toString()
     setMessages((prev) => [
@@ -46,6 +174,8 @@ export default function Home() {
       },
     ])
 
+    let fullContent = ''
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -55,7 +185,8 @@ export default function Home() {
             role: m.role,
             content: m.content,
           })),
-          creator: selectedCreator,
+          creators: selectedCreators,
+          conversationId: convId,
         }),
       })
 
@@ -68,8 +199,9 @@ export default function Home() {
       if (!reader) throw new Error('No reader')
 
       const decoder = new TextDecoder()
-      let fullContent = ''
       let buffer = ''
+      const sections: CreatorSection[] = []
+      let currentSection: CreatorSection | null = null
 
       while (true) {
         const { done, value } = await reader.read()
@@ -77,7 +209,6 @@ export default function Home() {
 
         buffer += decoder.decode(value, { stream: true })
 
-        // Parse SSE format
         const lines = buffer.split('\n')
         buffer = lines.pop() || ''
 
@@ -88,35 +219,86 @@ export default function Home() {
 
             try {
               const json = JSON.parse(data)
-              const content = json.choices?.[0]?.delta?.content || ''
-              if (content) {
-                fullContent += content
+
+              if (json.type === 'creator_start') {
+                currentSection = {
+                  creatorId: json.creatorId,
+                  creatorName: json.name,
+                  content: '',
+                  isStreaming: true,
+                }
+                sections.push(currentSection)
                 setMessages((prev) =>
                   prev.map((m) =>
-                    m.id === assistantMessageId ? { ...m, content: fullContent } : m
+                    m.id === assistantMessageId
+                      ? { ...m, creatorSections: [...sections] }
+                      : m
                   )
                 )
+              } else if (json.type === 'creator_end') {
+                if (currentSection) {
+                  currentSection.isStreaming = false
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === assistantMessageId
+                        ? { ...m, creatorSections: [...sections] }
+                        : m
+                    )
+                  )
+                }
+              } else {
+                const chunk = json.choices?.[0]?.delta?.content || ''
+                if (chunk) {
+                  if (currentSection) {
+                    currentSection.content += chunk
+                    fullContent = sections.map(s => `## ${s.creatorName}\n${s.content}`).join('\n\n')
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === assistantMessageId
+                          ? { ...m, content: fullContent, creatorSections: [...sections] }
+                          : m
+                      )
+                    )
+                  } else {
+                    fullContent += chunk
+                    setMessages((prev) =>
+                      prev.map((m) =>
+                        m.id === assistantMessageId ? { ...m, content: fullContent } : m
+                      )
+                    )
+                  }
+                }
               }
             } catch {
-              // Not JSON, might be plain text
-              fullContent += data
+              if (currentSection) {
+                currentSection.content += data
+                fullContent = sections.map(s => `## ${s.creatorName}\n${s.content}`).join('\n\n')
+              } else {
+                fullContent += data
+              }
               setMessages((prev) =>
                 prev.map((m) =>
-                  m.id === assistantMessageId ? { ...m, content: fullContent } : m
+                  m.id === assistantMessageId
+                    ? { ...m, content: fullContent, creatorSections: sections.length > 0 ? [...sections] : undefined }
+                    : m
                 )
               )
             }
           }
         }
       }
+
+      if (convId && fullContent) {
+        await saveMessage(convId, 'assistant', fullContent)
+        await loadConversations()
+      }
     } catch (error) {
       console.error('Error:', error)
       const errorMessage = error instanceof Error ? error.message : '不明なエラー'
+      fullContent = `エラー: ${errorMessage}`
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === assistantMessageId
-            ? { ...m, content: `エラー: ${errorMessage}` }
-            : m
+          m.id === assistantMessageId ? { ...m, content: fullContent } : m
         )
       )
     } finally {
@@ -124,46 +306,84 @@ export default function Home() {
     }
   }
 
-  const selectedCreatorInfo = selectedCreator
-    ? AVAILABLE_CREATORS.find(c => c.id === selectedCreator)
-    : null
+  if (isInitializing) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-[#343541]">
+        <div className="text-white">Loading...</div>
+      </div>
+    )
+  }
 
   return (
-    <div className="flex flex-col h-screen bg-[#343541]">
-      {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-        <h1 className="text-lg font-semibold text-white">BuzzTeacher</h1>
-        <CreatorSelector
-          selectedCreator={selectedCreator}
-          onSelect={setSelectedCreator}
-        />
-      </header>
+    <div className="flex h-screen bg-[#343541]">
+      {/* Sidebar */}
+      <Sidebar
+        conversations={conversations}
+        currentConversationId={currentConversationId}
+        onNewChat={handleNewChat}
+        onSelectConversation={handleSelectConversation}
+        onDeleteConversation={handleDeleteConversation}
+        user={user}
+        onLogout={handleLogout}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
-      {/* Messages */}
-      <main className="flex-1 overflow-y-auto">
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400">
-            <div className="text-4xl mb-4">🎬</div>
-            <h2 className="text-2xl font-bold text-white mb-2">BuzzTeacher</h2>
-            <p className="text-center max-w-md mb-4">
-              動画URLを送信すると、バズのプロが分析・アドバイスします。
-              <br />
-              TikTok, Instagram, YouTube, X に対応しています。
-            </p>
-            {selectedCreatorInfo && (
-              <p className="text-emerald-400 text-sm">
-                「{selectedCreatorInfo.name}」の視点でアドバイスします
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <header className="flex items-center px-4 py-3 border-b border-gray-700">
+          {/* Mobile menu button */}
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="md:hidden p-2 -ml-2 mr-2 text-gray-400 hover:text-white"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-6 h-6"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+              />
+            </svg>
+          </button>
+          <h1 className="text-lg font-semibold text-white flex-1 text-center md:text-left">
+            BuzzTeacher
+          </h1>
+        </header>
+
+        {/* Messages */}
+        <main className="flex-1 overflow-y-auto">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-gray-400 p-4">
+              <div className="text-4xl mb-4">🎬</div>
+              <h2 className="text-2xl font-bold text-white mb-2">BuzzTeacher</h2>
+              <p className="text-center max-w-md mb-4">
+                動画URLを送信すると、バズのプロが分析・アドバイスします。
+                <br />
+                TikTok, Instagram, YouTube, X に対応しています。
               </p>
-            )}
-          </div>
-        ) : (
-          <MessageList messages={messages} />
-        )}
-        <div ref={messagesEndRef} />
-      </main>
+            </div>
+          ) : (
+            <MessageList messages={messages} />
+          )}
+          <div ref={messagesEndRef} />
+        </main>
 
-      {/* Input */}
-      <ChatInput onSend={handleSendMessage} isLoading={isLoading} />
+        {/* Input */}
+        <ChatInput
+          onSend={handleSendMessage}
+          isLoading={isLoading}
+          selectedCreators={selectedCreators}
+          onSelectCreators={setSelectedCreators}
+        />
+      </div>
     </div>
   )
 }

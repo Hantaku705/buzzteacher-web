@@ -7,7 +7,7 @@ import { getKnowledgeSummary, getCreatorSummary, AVAILABLE_CREATORS, CreatorInfo
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, creator } = await req.json()
+    const { messages, creators } = await req.json()
     const lastMessage = messages[messages.length - 1]
     const userInput = lastMessage.content
 
@@ -23,18 +23,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Build system prompt with selected creator's knowledge
-    const knowledgeSummary = creator
-      ? getCreatorSummary(creator)
-      : getKnowledgeSummary()
-
-    const creatorInfo = creator
-      ? AVAILABLE_CREATORS.find(c => c.id === creator) || null
-      : null
-
-    const systemPrompt = buildSystemPrompt(knowledgeSummary, analysisContext, creatorInfo)
-
-    // Call Gemini API
     const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) {
       return new Response(JSON.stringify({ error: 'GEMINI_API_KEY が設定されていません' }), {
@@ -46,42 +34,125 @@ export async function POST(req: NextRequest) {
     const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
 
-    // Convert messages to Gemini format
+    // Convert messages to Gemini format (excluding the last message)
     const history = messages.slice(0, -1).map((m: { role: string; content: string }) => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }],
     }))
 
-    const chat = model.startChat({
-      history,
-      systemInstruction: {
-        role: 'user',
-        parts: [{ text: systemPrompt }],
-      },
-    })
-
-    // Stream response
-    const result = await chat.sendMessageStream(userInput)
-
-    // Create a readable stream for the response
     const encoder = new TextEncoder()
+
+    // Determine creators to analyze
+    const creatorsToAnalyze: string[] = creators && creators.length > 0
+      ? creators
+      : ['doshirouto']
+
+    // Single creator: use simple streaming (backward compatible)
+    if (creatorsToAnalyze.length === 1) {
+      const creatorId = creatorsToAnalyze[0]
+      const knowledgeSummary = getCreatorSummary(creatorId)
+      const creatorInfo = AVAILABLE_CREATORS.find(c => c.id === creatorId) || null
+      const systemPrompt = buildSystemPrompt(knowledgeSummary, analysisContext, creatorInfo)
+
+      const chat = model.startChat({
+        history,
+        systemInstruction: {
+          role: 'user',
+          parts: [{ text: systemPrompt }],
+        },
+      })
+
+      const result = await chat.sendMessageStream(userInput)
+
+      const stream = new ReadableStream({
+        async start(controller) {
+          try {
+            for await (const chunk of result.stream) {
+              const text = chunk.text()
+              if (text) {
+                const data = JSON.stringify({
+                  choices: [{ delta: { content: text } }]
+                })
+                controller.enqueue(encoder.encode(`data: ${data}\n\n`))
+              }
+            }
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+            controller.close()
+          } catch (error) {
+            console.error('Stream error:', error)
+            controller.error(error)
+          }
+        },
+      })
+
+      return new Response(stream, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive',
+        },
+      })
+    }
+
+    // Multiple creators: sequential streaming with markers
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of result.stream) {
-            const text = chunk.text()
-            if (text) {
-              // Format as SSE for compatibility with existing frontend
-              const data = JSON.stringify({
-                choices: [{ delta: { content: text } }]
+          for (const creatorId of creatorsToAnalyze) {
+            const creatorInfo = AVAILABLE_CREATORS.find(c => c.id === creatorId)
+            if (!creatorInfo) continue
+
+            // Send creator start marker
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+              type: 'creator_start',
+              creatorId: creatorId,
+              name: creatorInfo.name
+            })}\n\n`))
+
+            // Build prompt for this creator
+            const knowledgeSummary = getCreatorSummary(creatorId)
+            const systemPrompt = buildSystemPrompt(knowledgeSummary, analysisContext, creatorInfo)
+
+            const chat = model.startChat({
+              history,
+              systemInstruction: {
+                role: 'user',
+                parts: [{ text: systemPrompt }],
+              },
+            })
+
+            try {
+              const result = await chat.sendMessageStream(userInput)
+
+              for await (const chunk of result.stream) {
+                const text = chunk.text()
+                if (text) {
+                  const data = JSON.stringify({
+                    choices: [{ delta: { content: text } }]
+                  })
+                  controller.enqueue(encoder.encode(`data: ${data}\n\n`))
+                }
+              }
+            } catch (creatorError) {
+              console.error(`Error analyzing with ${creatorInfo.name}:`, creatorError)
+              const errorData = JSON.stringify({
+                choices: [{ delta: { content: `\n\n⚠️ ${creatorInfo.name}の分析中にエラーが発生しました。\n` } }]
               })
-              controller.enqueue(encoder.encode(`data: ${data}\n\n`))
+              controller.enqueue(encoder.encode(`data: ${errorData}\n\n`))
             }
+
+            // Send creator end marker
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+              type: 'creator_end',
+              creatorId: creatorId
+            })}\n\n`))
           }
+
           controller.enqueue(encoder.encode('data: [DONE]\n\n'))
           controller.close()
         } catch (error) {
-          console.error('Stream error:', error)
+          console.error('Multi-creator stream error:', error)
           controller.error(error)
         }
       },
@@ -111,7 +182,6 @@ async function analyzeVideo(url: string, platform: string): Promise<string> {
 
   try {
     if (platform === 'TikTok') {
-      // Get insight
       const insight = await getTikTokInsight(url)
       if (insight) {
         context += `\n### インサイト\n`
@@ -125,7 +195,6 @@ async function analyzeVideo(url: string, platform: string): Promise<string> {
         errors.push('TikTokインサイトの取得に失敗しました（APIキー未設定または動画が非公開）')
       }
 
-      // Download and analyze
       const videoBuffer = await downloadTikTokVideo(url)
       if (videoBuffer) {
         const analysis = await analyzeVideoWithGemini(videoBuffer)
@@ -152,9 +221,8 @@ async function analyzeVideo(url: string, platform: string): Promise<string> {
     errors.push('動画分析中に予期せぬエラーが発生しました')
   }
 
-  // エラーがあれば追記
   if (errors.length > 0) {
-    context += `\n### ⚠️ 分析の制限事項\n${errors.map(e => `- ${e}`).join('\n')}\n`
+    context += `\n### 分析の制限事項\n${errors.map(e => `- ${e}`).join('\n')}\n`
     context += `\n※ 上記の情報のみでアドバイスを行います。\n`
   }
 

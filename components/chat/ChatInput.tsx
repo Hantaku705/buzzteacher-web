@@ -1,15 +1,20 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { AVAILABLE_CREATORS } from '@/lib/knowledge/loader'
 
 interface ChatInputProps {
   onSend: (message: string) => void
   isLoading: boolean
+  selectedCreators: string[]
+  onSelectCreators: (ids: string[]) => void
 }
 
-export function ChatInput({ onSend, isLoading }: ChatInputProps) {
+export function ChatInput({ onSend, isLoading, selectedCreators, onSelectCreators }: ChatInputProps) {
   const [input, setInput] = useState('')
+  const [menuOpen, setMenuOpen] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -20,6 +25,20 @@ export function ChatInput({ onSend, isLoading }: ChatInputProps) {
       )}px`
     }
   }, [input])
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [menuOpen])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,6 +55,33 @@ export function ChatInput({ onSend, isLoading }: ChatInputProps) {
     }
   }
 
+  const toggleCreator = (id: string) => {
+    if (selectedCreators.includes(id)) {
+      onSelectCreators(selectedCreators.filter(c => c !== id))
+    } else {
+      onSelectCreators([...selectedCreators, id])
+    }
+  }
+
+  const toggleAll = () => {
+    if (selectedCreators.length === AVAILABLE_CREATORS.length) {
+      onSelectCreators(['doshirouto'])
+    } else {
+      onSelectCreators(AVAILABLE_CREATORS.map(c => c.id))
+    }
+  }
+
+  const isAllSelected = selectedCreators.length === AVAILABLE_CREATORS.length
+
+  const getSelectedNames = () => {
+    if (selectedCreators.length === 0) return null
+    if (selectedCreators.length === AVAILABLE_CREATORS.length) return '全員'
+    if (selectedCreators.length === 1) {
+      return AVAILABLE_CREATORS.find(c => c.id === selectedCreators[0])?.name
+    }
+    return `${selectedCreators.length}人選択中`
+  }
+
   return (
     <div className="border-t border-gray-700 bg-[#343541] p-4">
       <form
@@ -43,6 +89,79 @@ export function ChatInput({ onSend, isLoading }: ChatInputProps) {
         className="max-w-3xl mx-auto relative"
       >
         <div className="relative flex items-end bg-[#40414f] rounded-xl border border-gray-600 shadow-lg">
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen(!menuOpen)}
+              className={`p-3 transition-colors ${
+                selectedCreators.length > 0
+                  ? 'text-emerald-400 hover:text-emerald-300'
+                  : 'text-gray-400 hover:text-white'
+              }`}
+              title={selectedCreators.length > 0 ? `審査: ${getSelectedNames()}` : '審査する人を選択'}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="w-5 h-5"
+              >
+                <path fillRule="evenodd" d="M12 3.75a.75.75 0 01.75.75v6.75h6.75a.75.75 0 010 1.5h-6.75v6.75a.75.75 0 01-1.5 0v-6.75H4.5a.75.75 0 010-1.5h6.75V4.5a.75.75 0 01.75-.75z" clipRule="evenodd" />
+              </svg>
+            </button>
+
+            {menuOpen && (
+              <div className="absolute bottom-full left-0 mb-2 w-64 bg-[#2f2f2f] rounded-lg shadow-xl border border-gray-600 py-2 z-50">
+                <div className="px-3 py-2 text-xs text-gray-400 border-b border-gray-600">
+                  審査する人を選択（複数可）
+                </div>
+
+                <button
+                  type="button"
+                  onClick={toggleAll}
+                  className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-[#3f3f3f] transition-colors text-white border-b border-gray-700"
+                >
+                  <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                    isAllSelected ? 'bg-emerald-500 border-emerald-500' : 'border-gray-500'
+                  }`}>
+                    {isAllSelected && (
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </div>
+                  <span className="font-medium">全員選択</span>
+                </button>
+
+                {AVAILABLE_CREATORS.map((creator) => {
+                  const isSelected = selectedCreators.includes(creator.id)
+                  return (
+                    <button
+                      key={creator.id}
+                      type="button"
+                      onClick={() => toggleCreator(creator.id)}
+                      className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-[#3f3f3f] transition-colors text-white"
+                    >
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                        isSelected ? 'bg-emerald-500 border-emerald-500' : 'border-gray-500'
+                      }`}>
+                        {isSelected && (
+                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <div>{creator.name}</div>
+                        <div className="text-xs text-gray-500">{creator.description}</div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
           <textarea
             ref={textareaRef}
             value={input}
@@ -50,7 +169,7 @@ export function ChatInput({ onSend, isLoading }: ChatInputProps) {
             onKeyDown={handleKeyDown}
             placeholder="動画URLを入力してください（TikTok, Instagram, YouTube, X）"
             rows={1}
-            className="flex-1 bg-transparent text-white placeholder-gray-400 resize-none py-3 px-4 pr-12 focus:outline-none max-h-[200px]"
+            className="flex-1 bg-transparent text-white placeholder-gray-400 resize-none py-3 px-2 pr-12 focus:outline-none max-h-[200px]"
             disabled={isLoading}
           />
           <button
@@ -100,9 +219,13 @@ export function ChatInput({ onSend, isLoading }: ChatInputProps) {
               </svg>
               動画を分析中です...しばらくお待ちください
             </span>
+          ) : selectedCreators.length > 0 ? (
+            <span className="text-emerald-400">
+              「{getSelectedNames()}」の視点でアドバイスします
+            </span>
           ) : (
             <span className="text-gray-500">
-              BuzzTeacher は動画を分析し、バズるためのアドバイスを提供します
+              審査する人を選択してください
             </span>
           )}
         </p>
