@@ -3,11 +3,14 @@ export interface CreatorInfo {
   id: string
   name: string
   description: string
+  dataCount: number
 }
 
 // 利用可能なcreator一覧
 export const AVAILABLE_CREATORS: CreatorInfo[] = [
-  { id: 'doshirouto', name: 'ど素人ホテル', description: '片岡力也 - 稀有度×プロセスエコノミー' },
+  { id: 'doshirouto', name: 'ど素人ホテル', description: '片岡力也 - 稀有度×プロセスエコノミー', dataCount: 4 },
+  { id: 'galileo', name: 'ガリレオ', description: '前薗孝彰 - アルゴリズム×構成術', dataCount: 0 },
+  { id: 'matsudake', name: 'マツダ家の日常', description: '関ミナティ - リサーチ×ブランド化', dataCount: 0 },
 ]
 
 // creator別のサマリー定義
@@ -19,6 +22,22 @@ const CREATOR_SUMMARIES: Record<string, string> = {
 - **プロセスエコノミー**: 今→未来をリアルタイムで描く
 - **視聴者参加型**: 投票・コメント・参加要素を入れる
 - **フック例**: 「大赤字」「ど素人が」「〇〇万円」など数字・危機感ワード`,
+
+  galileo: `## ガリレオ（前薗孝彰）の核心
+- **アルゴリズムの7割は視聴時間**: 平均視聴時間と視聴完了率が最重要
+- **冒頭2秒でインパクト**: スワイプを止める強烈なフック
+- **3部構成（短尺）**: 冒頭インパクト→本編→終盤インパクト
+- **4部構成（長尺）**: 冒頭→興味付け→本編→まとめ
+- **テロップ4色以内**: 視認性を確保
+- **完全視聴率を上げる**: 最後まで見させる構成が鍵`,
+
+  matsudake: `## マツダ家の日常（関ミナティ）の核心
+- **最初の2秒で視覚的ツカミ**: 複雑な説明を避ける
+- **自分×視聴者の重合点**: 自分が楽しい×視聴者が求める
+- **1日20時間のリサーチ**: 徹底的な分析とPDCA
+- **定番フレーズでブランド化**: 覚えやすいキャッチフレーズ
+- **コメント欄から個性発見**: 視聴者フィードバック活用
+- **トレンドに乗る**: 伸びてる動画を参考にアレンジ`,
 }
 
 // 特定creatorのサマリーを取得

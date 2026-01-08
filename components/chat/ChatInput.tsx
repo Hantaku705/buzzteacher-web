@@ -65,7 +65,7 @@ export function ChatInput({ onSend, isLoading, selectedCreators, onSelectCreator
 
   const toggleAll = () => {
     if (selectedCreators.length === AVAILABLE_CREATORS.length) {
-      onSelectCreators(['doshirouto'])
+      onSelectCreators([AVAILABLE_CREATORS[0].id])
     } else {
       onSelectCreators(AVAILABLE_CREATORS.map(c => c.id))
     }
@@ -143,7 +143,7 @@ export function ChatInput({ onSend, isLoading, selectedCreators, onSelectCreator
                       onClick={() => toggleCreator(creator.id)}
                       className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-[#3f3f3f] transition-colors text-white"
                     >
-                      <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
                         isSelected ? 'bg-emerald-500 border-emerald-500' : 'border-gray-500'
                       }`}>
                         {isSelected && (
@@ -152,9 +152,16 @@ export function ChatInput({ onSend, isLoading, selectedCreators, onSelectCreator
                           </svg>
                         )}
                       </div>
-                      <div className="flex-1">
-                        <div>{creator.name}</div>
-                        <div className="text-xs text-gray-400">{creator.description}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate">{creator.name}</span>
+                          <span className={`text-xs flex-shrink-0 ${
+                            creator.dataCount > 0 ? 'text-emerald-400' : 'text-gray-500'
+                          }`}>
+                            {creator.dataCount > 0 ? `${creator.dataCount}ファイル` : '準備中'}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-400 truncate">{creator.description}</div>
                       </div>
                     </button>
                   )
