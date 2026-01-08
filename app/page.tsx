@@ -59,7 +59,10 @@ export default function Home() {
         }),
       })
 
-      if (!response.ok) throw new Error('Failed to send message')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `APIエラー: ${response.status}`)
+      }
 
       const reader = response.body?.getReader()
       if (!reader) throw new Error('No reader')
@@ -108,10 +111,11 @@ export default function Home() {
       }
     } catch (error) {
       console.error('Error:', error)
+      const errorMessage = error instanceof Error ? error.message : '不明なエラー'
       setMessages((prev) =>
         prev.map((m) =>
           m.id === assistantMessageId
-            ? { ...m, content: 'エラーが発生しました。もう一度お試しください。' }
+            ? { ...m, content: `エラー: ${errorMessage}` }
             : m
         )
       )
