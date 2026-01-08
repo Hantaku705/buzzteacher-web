@@ -54,7 +54,9 @@ export async function POST(req: NextRequest) {
 
     const chat = model.startChat({
       history,
-      systemInstruction: systemPrompt,
+      systemInstruction: {
+        parts: [{ text: systemPrompt }],
+      },
     })
 
     // Stream response
