@@ -184,7 +184,7 @@ export async function getTikTokUserVideos(profileUrl: string, count: number = 10
     }
 
     const postsJson = await postsRes.json()
-    const items = postsJson.itemList || postsJson.items || []
+    const items = postsJson.data?.itemList || postsJson.itemList || postsJson.items || []
 
     const videos: TikTokVideo[] = items.map((item: Record<string, unknown>) => {
       const stats = item.stats as Record<string, number> || {}
