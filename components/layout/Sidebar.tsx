@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Conversation, User } from '@/lib/types'
 import { ConversationList } from './ConversationList'
 import { UserProfile } from './UserProfile'
 import { CreatorProfile } from './CreatorProfile'
-import { CreatorInfoModal } from './CreatorInfoModal'
 
 interface SidebarProps {
   conversations: Conversation[]
@@ -35,7 +35,6 @@ export function Sidebar({
   onSelectCreators,
 }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState('')
-  const [showCreatorInfo, setShowCreatorInfo] = useState(false)
 
   const filteredConversations = conversations.filter((conv) =>
     conv.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -165,10 +164,10 @@ export function Sidebar({
           </div>
         )}
 
-        {/* Creator Info Button */}
+        {/* Creator Info Link */}
         <div className="px-2 pb-2">
-          <button
-            onClick={() => setShowCreatorInfo(true)}
+          <Link
+            href="/creators"
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#2a2b32] transition-colors text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <svg
@@ -186,18 +185,12 @@ export function Sidebar({
               />
             </svg>
             審査員について
-          </button>
+          </Link>
         </div>
 
         {/* User Profile */}
         <UserProfile user={user} onLogout={onLogout} />
       </aside>
-
-      {/* Creator Info Modal */}
-      <CreatorInfoModal
-        isOpen={showCreatorInfo}
-        onClose={() => setShowCreatorInfo(false)}
-      />
     </>
   )
 }

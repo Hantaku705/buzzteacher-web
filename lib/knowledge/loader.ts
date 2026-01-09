@@ -16,6 +16,11 @@ export interface CreatorInfo {
   dataCount: number
   imageUrl?: string
   accounts?: SocialAccounts
+  // 実績情報
+  followers?: string         // フォロワー数
+  achievements?: string[]    // 受賞歴
+  works?: string[]           // 代表作・バズ動画
+  career?: string[]          // 経歴・著書
 }
 
 // 利用可能なcreator一覧
@@ -25,49 +30,77 @@ export const AVAILABLE_CREATORS: CreatorInfo[] = [
     name: 'ど素人ホテル',
     description: '片岡力也 - 稀有度×プロセスエコノミー',
     dataCount: 4,
-    accounts: { threads: '4610_hotel', twitter: '4610_hotel' }
+    accounts: { threads: '4610_hotel', twitter: '4610_hotel' },
+    followers: 'Threads 1.8万人',
+    achievements: ['「ど素人ホテル再建計画」シリーズでバズ'],
+    works: ['ホテル再建ドキュメンタリー', '経営×SNSコンテンツ'],
+    career: ['元広告代理店勤務', 'ホテルオーナー兼インフルエンサー'],
   },
   {
     id: 'galileo',
     name: 'ガリレオ',
     description: '前薗孝彰 - アルゴリズム×構成術',
     dataCount: 0,
-    accounts: { twitter: 'galileo_tiktok', tiktok: 'galileotiktok' }
+    accounts: { twitter: 'galileo_tiktok', tiktok: 'galileotiktok' },
+    followers: 'TikTok 50万人',
+    achievements: ['TikTok運用のプロフェッショナル'],
+    works: ['アルゴリズム解説動画', 'ショート動画構成術'],
+    career: ['TikTokコンサルタント', 'SNSマーケター'],
   },
   {
     id: 'matsudake',
     name: 'マツダ家の日常',
     description: '関ミナティ - リサーチ×ブランド化',
     dataCount: 15,
-    accounts: { tiktok: 'matsudafamily', youtube: 'UCKrIPBpUuS0xFYgL_3LMPGw', instagram: 'matsudafamily' }
+    accounts: { tiktok: 'matsudafamily', youtube: 'UCKrIPBpUuS0xFYgL_3LMPGw', instagram: 'matsudafamily' },
+    followers: 'TikTok 700万人',
+    achievements: ['家族系TikToker日本一'],
+    works: ['「パパとギャル」シリーズ', '家族コンテンツ'],
+    career: ['元お笑い芸人', '現役TikToker'],
   },
   {
     id: 'yukos',
     name: 'ゆうこす',
     description: '菅本裕子 - 共感SNS×モテクリエイター',
     dataCount: 16,
-    accounts: { twitter: 'yukos_kawaii', tiktok: 'yukos0520', instagram: 'yukos0520', note: 'yukosnote' }
+    accounts: { twitter: 'yukos_kawaii', tiktok: 'yukos0520', instagram: 'yukos0520', note: 'yukosnote' },
+    followers: '総フォロワー 200万人',
+    achievements: ['入りたいライバー事務所No.1', '321年間売上20億円'],
+    works: ['321（サニイチ）ライバー事務所運営', '著書『共感SNS』'],
+    career: ['元HKT48', 'モテクリエイター', '実業家'],
   },
   {
     id: 'satoyu',
     name: 'SATOYU',
     description: 'OHIOBOSS - グローバル×ミーム文化',
     dataCount: 0,
-    accounts: { twitter: 'satoyu0704', tiktok: 'satoyu727', instagram: 'satoyuohioboss' }
+    accounts: { twitter: 'satoyu0704', tiktok: 'satoyu727', instagram: 'satoyuohioboss' },
+    followers: 'TikTok 1060万人',
+    achievements: ['TikTok Creator of the Year 2024', '世界的ミームクリエイター'],
+    works: ['Ohio Final Boss', 'グローバルバイラル動画'],
+    career: ['TikTok LIVEクリエイター'],
   },
   {
     id: 'kagei',
     name: '景井ひな',
     description: 'TikTokクリエイター - 爆発的成長×親しみやすさ',
     dataCount: 0,
-    accounts: { twitter: 'hinatter0219', tiktok: 'kageihina', instagram: 'kagei_hina' }
+    accounts: { twitter: 'hinatter0219', tiktok: 'kageihina', instagram: 'kagei_hina' },
+    followers: 'TikTok 1030万人',
+    achievements: ['女性国内SNSフォロワー数2位', '開始10日で10万人達成', '9ヶ月で100万人突破'],
+    works: ['リップシンク動画', 'ダンス動画'],
+    career: ['女優', 'モデル', 'TikToker'],
   },
   {
     id: 'gokkoclub',
     name: 'ごっこ倶楽部',
     description: '縦型ショートドラマ - ストーリー×感情',
     dataCount: 15,
-    accounts: { twitter: 'gokko5club', tiktok: 'gokko5club', youtube: 'UChbyqrxREoPtmUmYaxUAGqA', instagram: 'gokko5club' }
+    accounts: { twitter: 'gokko5club', tiktok: 'gokko5club', youtube: 'UChbyqrxREoPtmUmYaxUAGqA', instagram: 'gokko5club' },
+    followers: 'TikTok 180万人',
+    achievements: ['TikTok上半期トレンド大賞2024'],
+    works: ['縦型ショートドラマ', '1-3分完結ストーリー'],
+    career: ['5人のクリエイター集団', '監督・脚本・俳優'],
   },
 ]
 

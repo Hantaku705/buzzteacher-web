@@ -59,7 +59,7 @@ export default function CreatorsPage() {
           BuzzTeacherの審査員として、それぞれ独自のノウハウで動画をレビューします
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {AVAILABLE_CREATORS.map((creator) => {
             const summary = getCreatorSummary(creator.id)
             const keyPoints = summary
@@ -78,9 +78,9 @@ export default function CreatorsPage() {
                 key={creator.id}
                 className="bg-[#444654] rounded-xl p-6 hover:bg-[#4a4b5a] transition-colors"
               >
-                {/* Header */}
+                {/* Header with Avatar and Basic Info */}
                 <div className="flex items-start gap-4 mb-4">
-                  <div className="w-16 h-16 rounded-full bg-emerald-600 flex items-center justify-center text-white text-2xl font-bold shrink-0">
+                  <div className="w-20 h-20 rounded-full bg-emerald-600 flex items-center justify-center text-white text-3xl font-bold shrink-0">
                     {creator.imageUrl ? (
                       <img
                         src={creator.imageUrl}
@@ -92,19 +92,78 @@ export default function CreatorsPage() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h2 className="text-lg font-bold text-white">{creator.name}</h2>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="text-xl font-bold text-white">{creator.name}</h2>
+                      {creator.followers && (
+                        <span className="px-2 py-0.5 bg-emerald-600/30 text-emerald-400 text-xs rounded-full font-medium">
+                          {creator.followers}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-gray-400 text-sm mt-1">{creator.description}</p>
                   </div>
                 </div>
 
-                {/* Key Points */}
+                {/* Achievements */}
+                {creator.achievements && creator.achievements.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">受賞・実績</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {creator.achievements.map((achievement, index) => (
+                        <span
+                          key={index}
+                          className="px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs rounded-lg"
+                        >
+                          {achievement}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Works */}
+                {creator.works && creator.works.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">代表作・活動</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {creator.works.map((work, index) => (
+                        <span
+                          key={index}
+                          className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-lg"
+                        >
+                          {work}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Career */}
+                {creator.career && creator.career.length > 0 && (
+                  <div className="mb-4">
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">経歴</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {creator.career.map((item, index) => (
+                        <span
+                          key={index}
+                          className="px-2 py-1 bg-gray-600/50 text-gray-300 text-xs rounded-lg"
+                        >
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Key Points from Summary */}
                 {keyPoints.length > 0 && (
                   <div className="mb-4">
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">メソッド</h3>
                     <div className="flex flex-wrap gap-2">
                       {keyPoints.map((point, index) => (
                         <span
                           key={index}
-                          className="px-2 py-1 bg-emerald-600/20 text-emerald-400 text-xs rounded-full"
+                          className="px-2 py-1 bg-emerald-600/20 text-emerald-400 text-xs rounded-lg"
                         >
                           {point}
                         </span>
@@ -113,33 +172,27 @@ export default function CreatorsPage() {
                   </div>
                 )}
 
-                {/* Data Count */}
-                <div className="mb-4 text-sm">
-                  <span className="text-gray-400">データ: </span>
-                  <span className={creator.dataCount > 0 ? 'text-emerald-400' : 'text-gray-500'}>
-                    {creator.dataCount > 0 ? `${creator.dataCount}件` : '準備中'}
-                  </span>
-                </div>
-
                 {/* Social Links */}
                 {socialAccounts.length > 0 && (
-                  <div className="flex gap-2 flex-wrap">
-                    {socialAccounts.map(([platform, username]) => {
-                      const config = platformConfig[platform]
-                      if (!config) return null
-                      return (
-                        <a
-                          key={platform}
-                          href={getSocialUrl(platform, username as string)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={`${config.color} px-3 py-1.5 rounded-full flex items-center gap-1.5 text-white text-xs font-medium transition-colors`}
-                        >
-                          <span className="font-bold">{config.icon}</span>
-                          <span>@{username}</span>
-                        </a>
-                      )
-                    })}
+                  <div className="pt-4 border-t border-gray-600">
+                    <div className="flex gap-2 flex-wrap">
+                      {socialAccounts.map(([platform, username]) => {
+                        const config = platformConfig[platform]
+                        if (!config) return null
+                        return (
+                          <a
+                            key={platform}
+                            href={getSocialUrl(platform, username as string)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`${config.color} px-3 py-1.5 rounded-full flex items-center gap-1.5 text-white text-xs font-medium transition-colors`}
+                          >
+                            <span className="font-bold">{config.icon}</span>
+                            <span>@{username}</span>
+                          </a>
+                        )
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
