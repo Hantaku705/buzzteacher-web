@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { detectPlatform, extractVideoUrl } from '@/lib/utils/platform'
 import { getTikTokInsight, downloadTikTokVideo } from '@/lib/api/tiktok'
+import { getInstagramInsight, downloadInstagramVideo } from '@/lib/api/instagram'
 import { analyzeVideoWithGemini, analyzeYouTubeWithGemini } from '@/lib/api/gemini'
 import { getKnowledgeSummary, getCreatorSummary, AVAILABLE_CREATORS, CreatorInfo } from '@/lib/knowledge/loader'
 
@@ -232,7 +233,34 @@ async function analyzeVideoWithProgress(
       } else {
         errors.push('YouTube動画の分析に失敗しました（Gemini APIエラー）')
       }
-    } else if (platform === 'Instagram' || platform === 'X') {
+    } else if (platform === 'Instagram') {
+      onProgress('Instagramインサイトを取得中...')
+      const insight = await getInstagramInsight(url)
+      if (insight) {
+        context += `\n### インサイト\n`
+        context += `- 再生数: ${insight.view?.toLocaleString() || '取得できず'}\n`
+        context += `- いいね: ${insight.like?.toLocaleString() || '取得できず'}\n`
+        context += `- コメント: ${insight.comment?.toLocaleString() || '取得できず'}\n`
+        context += `- シェア: ${insight.share?.toLocaleString() || '取得できず'}\n`
+        context += `- 動画時間: ${insight.durationSec || '不明'}秒\n`
+      } else {
+        errors.push('Instagramインサイトの取得に失敗しました（APIキー未設定または動画が非公開）')
+      }
+
+      onProgress('Instagram動画をダウンロード中...')
+      const videoBuffer = await downloadInstagramVideo(url)
+      if (videoBuffer) {
+        onProgress('動画を分析中...')
+        const analysis = await analyzeVideoWithGemini(videoBuffer)
+        if (analysis) {
+          context += `\n### Gemini動画分析結果\n${analysis}\n`
+        } else {
+          errors.push('動画の内容分析に失敗しました（Gemini APIエラー）')
+        }
+      } else {
+        errors.push('Instagram動画のダウンロードに失敗しました')
+      }
+    } else if (platform === 'X') {
       onProgress(`${platform}のURLを認識しました`)
       errors.push(`${platform}は現在動画分析に対応していません（URLのみ認識）`)
     }

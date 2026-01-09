@@ -219,7 +219,7 @@ export function ChatInput({ onSend, isLoading, selectedCreators, onSelectCreator
             )}
           </button>
         </div>
-        <p className="text-xs text-center mt-2">
+        <div className="text-xs text-center mt-2 flex items-center justify-center gap-1">
           {isLoading ? (
             <span className="text-emerald-400 flex items-center justify-center gap-2">
               <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -229,15 +229,33 @@ export function ChatInput({ onSend, isLoading, selectedCreators, onSelectCreator
               動画を分析中です...しばらくお待ちください
             </span>
           ) : selectedCreators.length > 0 ? (
-            <span className="text-emerald-400">
-              「{getSelectedNames()}」の視点でアドバイスします
-            </span>
+            <>
+              <span className="text-emerald-400">
+                「{getSelectedNames()}」の視点でアドバイスします
+              </span>
+              <button
+                type="button"
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="text-gray-400 hover:text-emerald-400 transition-colors p-0.5 rounded focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                title="他の人を追加"
+                aria-label="他の人を追加"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  className="w-4 h-4"
+                >
+                  <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+                </svg>
+              </button>
+            </>
           ) : (
             <span className="text-gray-400">
               審査する人を選択してください
             </span>
           )}
-        </p>
+        </div>
       </form>
     </div>
   )
