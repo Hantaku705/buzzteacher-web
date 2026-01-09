@@ -17,6 +17,19 @@ export function extractTikTokId(url: string): string | null {
   return idMatch ? idMatch[1] : null
 }
 
+export function isTikTokProfileUrl(url: string): boolean {
+  // Profile URL: https://www.tiktok.com/@username (without /video/ or /photo/)
+  if (!url.toLowerCase().includes('tiktok.com')) return false
+  if (url.includes('/video/') || url.includes('/photo/')) return false
+  return /@[^/]+/.test(url)
+}
+
+export function extractTikTokUsername(url: string): string | null {
+  // Extract @username from TikTok profile URL
+  const match = url.match(/tiktok\.com\/@([^/?#]+)/i)
+  return match ? match[1] : null
+}
+
 export function extractYouTubeId(url: string): string | null {
   try {
     const urlObj = new URL(url)
