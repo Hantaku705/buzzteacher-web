@@ -38,12 +38,14 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => ({}))
     const title = body.title || 'New Chat'
+    const creators = body.creators || ['doshirouto']
 
     const { data, error } = await supabase
       .from('conversations')
       .insert({
         user_id: user.id,
         title,
+        creators,
       })
       .select()
       .single()

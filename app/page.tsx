@@ -169,7 +169,7 @@ export default function Home() {
         const response = await fetch('/api/conversations', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: content.slice(0, 50) }),
+          body: JSON.stringify({ title: content.slice(0, 50), creators: selectedCreators }),
         })
         if (response.ok) {
           const newConv = await response.json()

@@ -16,9 +16,14 @@ CREATE TABLE IF NOT EXISTS public.conversations (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   title TEXT NOT NULL DEFAULT 'New Chat',
+  creators TEXT[] DEFAULT ARRAY['doshirouto'],
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Migration: Add creators column to existing table
+-- Run this if table already exists:
+-- ALTER TABLE public.conversations ADD COLUMN IF NOT EXISTS creators TEXT[] DEFAULT ARRAY['doshirouto'];
 
 -- Messages table
 CREATE TABLE IF NOT EXISTS public.messages (

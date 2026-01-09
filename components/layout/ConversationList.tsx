@@ -2,6 +2,67 @@
 
 import { useState } from 'react'
 import { Conversation } from '@/lib/types'
+import { AVAILABLE_CREATORS } from '@/lib/knowledge/loader'
+
+function getInitial(name: string): string {
+  return name.charAt(0)
+}
+
+function CreatorIcons({ creatorIds }: { creatorIds: string[] }) {
+  const creators = creatorIds
+    .map(id => AVAILABLE_CREATORS.find(c => c.id === id))
+    .filter(Boolean)
+    .slice(0, 3)
+
+  const extraCount = creatorIds.length - 3
+
+  if (creators.length === 0) {
+    // デフォルト: ど素人ホテル
+    const defaultCreator = AVAILABLE_CREATORS[0]
+    return (
+      <div className="w-5 h-5 rounded-full bg-emerald-600 flex items-center justify-center text-white text-[10px] font-medium shrink-0">
+        {getInitial(defaultCreator.name)}
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative flex items-center shrink-0" style={{ width: `${20 + (creators.length - 1) * 10}px`, height: '20px' }}>
+      {creators.map((creator, index) => (
+        <div
+          key={creator!.id}
+          className="absolute w-5 h-5 rounded-full bg-emerald-600 flex items-center justify-center text-white text-[10px] font-medium border border-[#202123]"
+          style={{
+            left: `${index * 10}px`,
+            zIndex: 3 - index,
+          }}
+          title={creator!.name}
+        >
+          {creator!.imageUrl ? (
+            <img
+              src={creator!.imageUrl}
+              alt={creator!.name}
+              className="w-full h-full rounded-full object-cover"
+            />
+          ) : (
+            getInitial(creator!.name)
+          )}
+        </div>
+      ))}
+      {extraCount > 0 && (
+        <div
+          className="absolute w-5 h-5 rounded-full bg-gray-600 flex items-center justify-center text-white text-[10px] font-medium border border-[#202123]"
+          style={{
+            left: `${creators.length * 10}px`,
+            zIndex: 0,
+          }}
+        >
+          +{extraCount}
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface ConversationListProps {
   conversations: Conversation[]
@@ -80,20 +141,7 @@ export function ConversationList({
               `}
               onClick={() => onSelect(conv.id)}
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="w-4 h-4 text-gray-400 shrink-0"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z"
-                />
-              </svg>
+              <CreatorIcons creatorIds={conv.creators || ['doshirouto']} />
               <span className="text-sm text-white truncate flex-1">
                 {conv.title}
               </span>
