@@ -4,6 +4,7 @@ export interface CreatorInfo {
   name: string
   description: string
   dataCount: number
+  imageUrl?: string  // プロフィール画像URL（オプション）
 }
 
 // 利用可能なcreator一覧

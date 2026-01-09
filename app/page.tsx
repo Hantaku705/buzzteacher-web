@@ -438,6 +438,8 @@ export default function Home() {
         onLogout={handleLogout}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        selectedCreators={selectedCreators}
+        onSelectCreators={setSelectedCreators}
       />
 
       {/* Main Content */}

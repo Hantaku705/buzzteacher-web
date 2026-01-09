@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Conversation, User } from '@/lib/types'
 import { ConversationList } from './ConversationList'
 import { UserProfile } from './UserProfile'
+import { CreatorProfile } from './CreatorProfile'
 
 interface SidebarProps {
   conversations: Conversation[]
@@ -15,6 +16,8 @@ interface SidebarProps {
   onLogout: () => void
   isOpen: boolean
   onClose: () => void
+  selectedCreators: string[]
+  onSelectCreators: (ids: string[]) => void
 }
 
 export function Sidebar({
@@ -27,6 +30,8 @@ export function Sidebar({
   onLogout,
   isOpen,
   onClose,
+  selectedCreators,
+  onSelectCreators,
 }: SidebarProps) {
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -79,6 +84,12 @@ export function Sidebar({
             <span className="text-sm">新しいチャット</span>
           </button>
         </div>
+
+        {/* Creator Profile */}
+        <CreatorProfile
+          selectedCreators={selectedCreators}
+          onSelectCreators={onSelectCreators}
+        />
 
         {/* Content area - differs based on auth state */}
         {user ? (
