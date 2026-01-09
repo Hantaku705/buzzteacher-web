@@ -9,9 +9,10 @@ interface MessageListProps {
   onEdit?: (messageId: string, newContent: string) => void
   isLoading?: boolean
   loadingStage?: string | null
+  loadingPercent?: number | null
 }
 
-export function MessageList({ messages, onRegenerate, onEdit, isLoading, loadingStage }: MessageListProps) {
+export function MessageList({ messages, onRegenerate, onEdit, isLoading, loadingStage, loadingPercent }: MessageListProps) {
   return (
     <div className="flex flex-col">
       {messages.map((message, index) => (
@@ -21,6 +22,7 @@ export function MessageList({ messages, onRegenerate, onEdit, isLoading, loading
           isLast={index === messages.length - 1}
           isLoading={isLoading}
           loadingStage={loadingStage}
+          loadingPercent={loadingPercent}
           onRegenerate={onRegenerate}
           onEdit={onEdit}
         />

@@ -372,9 +372,22 @@ export async function POST(req: NextRequest) {
       ? creators
       : ['doshirouto']
 
-    // Helper to send progress events
-    const sendProgress = (controller: ReadableStreamDefaultController, stage: string) => {
-      controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'progress', stage })}\n\n`))
+    // Helper to send progress events (with optional percent, current, total)
+    const sendProgress = (
+      controller: ReadableStreamDefaultController,
+      stage: string,
+      percent?: number,
+      current?: number,
+      total?: number
+    ) => {
+      const event: { type: string; stage: string; percent?: number; current?: number; total?: number } = {
+        type: 'progress',
+        stage
+      }
+      if (percent !== undefined) event.percent = percent
+      if (current !== undefined) event.current = current
+      if (total !== undefined) event.total = total
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`))
     }
 
     // Single creator: use simple streaming (backward compatible)
@@ -389,7 +402,11 @@ export async function POST(req: NextRequest) {
             // Analyze video with progress updates
             let analysisContext = ''
             if (videoUrl && platform) {
-              analysisContext = await analyzeVideoWithProgress(videoUrl, platform, (stage) => sendProgress(controller, stage))
+              analysisContext = await analyzeVideoWithProgress(
+                videoUrl,
+                platform,
+                (stage, percent, current, total) => sendProgress(controller, stage, percent, current, total)
+              )
             }
 
             sendProgress(controller, 'アドバイスを生成中...')
@@ -440,7 +457,11 @@ export async function POST(req: NextRequest) {
           // Analyze video with progress updates (only once for all creators)
           let analysisContext = ''
           if (videoUrl && platform) {
-            analysisContext = await analyzeVideoWithProgress(videoUrl, platform, (stage) => sendProgress(controller, stage))
+            analysisContext = await analyzeVideoWithProgress(
+              videoUrl,
+              platform,
+              (stage, percent, current, total) => sendProgress(controller, stage, percent, current, total)
+            )
           }
 
           for (const creatorId of creatorsToAnalyze) {
@@ -523,7 +544,7 @@ export async function POST(req: NextRequest) {
 async function analyzeVideoWithProgress(
   url: string,
   platform: string,
-  onProgress: (stage: string) => void
+  onProgress: (stage: string, percent?: number, current?: number, total?: number) => void
 ): Promise<string> {
   // Check if TikTok profile URL
   if (platform === 'TikTok' && isTikTokProfileUrl(url)) {
@@ -658,7 +679,7 @@ ${analysisContext}
 
 async function analyzeTikTokProfile(
   url: string,
-  onProgress: (stage: string) => void
+  onProgress: (stage: string, percent?: number, current?: number, total?: number) => void
 ): Promise<string> {
   let context = ''
   const errors: string[] = []
@@ -674,10 +695,10 @@ async function analyzeTikTokProfile(
       // 2. 定量分析レポート生成
       context = generateQuantitativeReport(stats, userVideos.username)
 
-      // 3. 動画分析（3件ずつ並列）
+      // 3. 動画分析（5件ずつ並列）
       const analysisResults = await analyzeVideosInBatches(
         userVideos.videos,
-        3,
+        5,
         onProgress
       )
 
@@ -727,15 +748,17 @@ async function analyzeTikTokProfile(
 async function analyzeVideosInBatches(
   videos: TikTokVideo[],
   batchSize: number,
-  onProgress: (stage: string) => void
+  onProgress: (stage: string, percent?: number, current?: number, total?: number) => void
 ): Promise<VideoAnalysisResult[]> {
   const results: VideoAnalysisResult[] = []
+  const total = videos.length
 
   for (let i = 0; i < videos.length; i += batchSize) {
     const batch = videos.slice(i, i + batchSize)
     const startIdx = i + 1
     const endIdx = Math.min(i + batchSize, videos.length)
-    onProgress(`動画分析中... (${startIdx}-${endIdx}/${videos.length})`)
+    const percent = Math.round((i / total) * 100)
+    onProgress(`動画分析中... (${startIdx}-${endIdx}/${total})`, percent, startIdx, total)
 
     // Process batch in parallel
     const batchResults = await Promise.all(
@@ -792,6 +815,11 @@ async function analyzeVideosInBatches(
     )
 
     results.push(...batchResults)
+
+    // バッチ完了時の進捗更新
+    const completedCount = Math.min(i + batchSize, total)
+    const completedPercent = Math.round((completedCount / total) * 100)
+    onProgress(`動画${completedCount}/${total}完了`, completedPercent, completedCount, total)
   }
 
   return results

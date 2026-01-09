@@ -166,9 +166,10 @@ interface MessageItemFullProps extends MessageItemProps {
   isLast?: boolean
   isLoading?: boolean
   loadingStage?: string | null
+  loadingPercent?: number | null
 }
 
-export function MessageItem({ message, onRetry, onRegenerate, onEdit, isLast, isLoading, loadingStage }: MessageItemFullProps) {
+export function MessageItem({ message, onRetry, onRegenerate, onEdit, isLast, isLoading, loadingStage, loadingPercent }: MessageItemFullProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(message.content)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -308,7 +309,21 @@ export function MessageItem({ message, onRetry, onRegenerate, onEdit, isLast, is
                 <span className="text-emerald-400 text-sm font-medium">
                   {loadingStage || '処理中...'}
                 </span>
+                {loadingPercent !== null && loadingPercent !== undefined && (
+                  <span className="text-gray-400 text-sm">
+                    {loadingPercent}%
+                  </span>
+                )}
               </div>
+              {/* Progress Bar */}
+              {loadingPercent !== null && loadingPercent !== undefined && (
+                <div className="w-full max-w-xs bg-gray-700 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-emerald-500 h-2 rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${loadingPercent}%` }}
+                  />
+                </div>
+              )}
               {!loadingStage && (
                 <span className="text-gray-400 text-xs">動画のダウンロードと分析には30秒〜1分ほどかかります</span>
               )}

@@ -11,6 +11,7 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [loadingStage, setLoadingStage] = useState<string | null>(null)
+  const [loadingPercent, setLoadingPercent] = useState<number | null>(null)
   const [selectedCreators, setSelectedCreators] = useState<string[]>(['doshirouto'])
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
@@ -249,6 +250,9 @@ export default function Home() {
 
               if (json.type === 'progress') {
                 setLoadingStage(json.stage)
+                if (json.percent !== undefined) {
+                  setLoadingPercent(json.percent)
+                }
               } else if (json.type === 'creator_start') {
                 currentSection = {
                   creatorId: json.creatorId,
@@ -334,6 +338,7 @@ export default function Home() {
     } finally {
       setIsLoading(false)
       setLoadingStage(null)
+      setLoadingPercent(null)
     }
   }
 
@@ -492,6 +497,7 @@ export default function Home() {
               onEdit={handleEditMessage}
               isLoading={isLoading}
               loadingStage={loadingStage}
+              loadingPercent={loadingPercent}
             />
           )}
           <div ref={messagesEndRef} />
