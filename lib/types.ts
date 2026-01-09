@@ -51,3 +51,17 @@ export interface AnalysisResult {
   compositionPlan: string
   secPerCut: number
 }
+
+export interface VideoAnalysisResult {
+  videoId: string
+  videoUrl: string
+  desc: string
+  stats: {
+    playCount: number
+    likeCount: number
+    commentCount: number
+    shareCount: number
+  }
+  analysis: string | null
+  error?: string
+}

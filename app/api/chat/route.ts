@@ -1,10 +1,11 @@
 import { NextRequest } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { detectPlatform, extractVideoUrl, isTikTokProfileUrl } from '@/lib/utils/platform'
-import { getTikTokInsight, downloadTikTokVideo, getTikTokUserVideos } from '@/lib/api/tiktok'
+import { getTikTokInsight, downloadTikTokVideo, getTikTokUserVideos, TikTokVideo } from '@/lib/api/tiktok'
 import { getInstagramInsight, downloadInstagramVideo } from '@/lib/api/instagram'
 import { analyzeVideoWithGemini, analyzeYouTubeWithGemini } from '@/lib/api/gemini'
 import { getKnowledgeSummary, getCreatorSummary, AVAILABLE_CREATORS, CreatorInfo } from '@/lib/knowledge/loader'
+import { VideoAnalysisResult } from '@/lib/types'
 
 export async function POST(req: NextRequest) {
   try {
@@ -337,7 +338,6 @@ async function analyzeTikTokProfile(
 
     if (userVideos && userVideos.videos.length > 0) {
       context += `\n### ユーザー: @${userVideos.username}\n`
-      context += `\n### 最新動画一覧（${userVideos.videos.length}件）\n`
 
       // Calculate total stats
       let totalViews = 0
@@ -345,25 +345,14 @@ async function analyzeTikTokProfile(
       let totalComments = 0
       let totalShares = 0
 
-      userVideos.videos.forEach((video, index) => {
+      userVideos.videos.forEach((video) => {
         totalViews += video.stats.playCount
         totalLikes += video.stats.likeCount
         totalComments += video.stats.commentCount
         totalShares += video.stats.shareCount
-
-        const date = new Date(video.createTime * 1000).toLocaleDateString('ja-JP')
-        context += `\n#### ${index + 1}. ${video.desc.slice(0, 50) || '(説明なし)'}${video.desc.length > 50 ? '...' : ''}\n`
-        context += `- URL: ${video.url}\n`
-        context += `- 投稿日: ${date}\n`
-        context += `- 再生: ${video.stats.playCount.toLocaleString()}\n`
-        context += `- いいね: ${video.stats.likeCount.toLocaleString()}\n`
-        context += `- コメント: ${video.stats.commentCount.toLocaleString()}\n`
-        context += `- シェア: ${video.stats.shareCount.toLocaleString()}\n`
-        context += `- 保存: ${video.stats.collectCount.toLocaleString()}\n`
-        context += `- 動画時間: ${video.durationSec}秒\n`
       })
 
-      // Add summary stats
+      // Add summary stats first
       const avgViews = Math.round(totalViews / userVideos.videos.length)
       const avgLikes = Math.round(totalLikes / userVideos.videos.length)
       const avgEngagement = totalViews > 0
@@ -371,11 +360,34 @@ async function analyzeTikTokProfile(
         : '0'
 
       context += `\n### サマリー統計\n`
+      context += `- 動画数: ${userVideos.videos.length}件\n`
       context += `- 総再生数: ${totalViews.toLocaleString()}\n`
       context += `- 平均再生数: ${avgViews.toLocaleString()}\n`
       context += `- 総いいね数: ${totalLikes.toLocaleString()}\n`
       context += `- 平均いいね数: ${avgLikes.toLocaleString()}\n`
       context += `- 平均エンゲージメント率: ${avgEngagement}%\n`
+
+      // Analyze videos in batches (3 at a time)
+      const analysisResults = await analyzeVideosInBatches(
+        userVideos.videos,
+        3,
+        onProgress
+      )
+
+      // Add individual video analysis results
+      context += `\n### 動画分析結果（${analysisResults.length}/${userVideos.videos.length}件成功）\n`
+
+      analysisResults.forEach((result, index) => {
+        context += `\n#### ${index + 1}. ${result.desc.slice(0, 50) || '(説明なし)'}${result.desc.length > 50 ? '...' : ''}\n`
+        context += `- URL: ${result.videoUrl}\n`
+        context += `- 再生: ${result.stats.playCount.toLocaleString()} / いいね: ${result.stats.likeCount.toLocaleString()}\n`
+
+        if (result.analysis) {
+          context += `\n**Gemini分析結果:**\n${result.analysis}\n`
+        } else if (result.error) {
+          context += `- 分析エラー: ${result.error}\n`
+        }
+      })
 
       // Find best performing video
       const bestVideo = userVideos.videos.reduce((best, current) =>
@@ -385,6 +397,16 @@ async function analyzeTikTokProfile(
       context += `- タイトル: ${bestVideo.desc.slice(0, 50) || '(説明なし)'}\n`
       context += `- URL: ${bestVideo.url}\n`
       context += `- 再生数: ${bestVideo.stats.playCount.toLocaleString()}\n`
+
+      // Generate overall summary prompt for Gemini
+      onProgress('全体サマリーを生成中...')
+      context += `\n### 全体傾向分析（AI生成対象）\n`
+      context += `上記${analysisResults.length}件の動画分析結果を踏まえて、以下の観点でサマリーを生成してください：\n`
+      context += `- 共通するコンテンツパターン\n`
+      context += `- フック（冒頭）の傾向\n`
+      context += `- 強み・成功要因\n`
+      context += `- 改善の余地がある点\n`
+
     } else {
       errors.push('プロフィール情報の取得に失敗しました（APIキー未設定またはアカウントが非公開）')
     }
@@ -399,4 +421,77 @@ async function analyzeTikTokProfile(
   }
 
   return context
+}
+
+async function analyzeVideosInBatches(
+  videos: TikTokVideo[],
+  batchSize: number,
+  onProgress: (stage: string) => void
+): Promise<VideoAnalysisResult[]> {
+  const results: VideoAnalysisResult[] = []
+
+  for (let i = 0; i < videos.length; i += batchSize) {
+    const batch = videos.slice(i, i + batchSize)
+    const startIdx = i + 1
+    const endIdx = Math.min(i + batchSize, videos.length)
+    onProgress(`動画分析中... (${startIdx}-${endIdx}/${videos.length})`)
+
+    // Process batch in parallel
+    const batchResults = await Promise.all(
+      batch.map(async (video): Promise<VideoAnalysisResult> => {
+        try {
+          const buffer = await downloadTikTokVideo(video.url)
+          if (!buffer) {
+            return {
+              videoId: video.id,
+              videoUrl: video.url,
+              desc: video.desc,
+              stats: {
+                playCount: video.stats.playCount,
+                likeCount: video.stats.likeCount,
+                commentCount: video.stats.commentCount,
+                shareCount: video.stats.shareCount,
+              },
+              analysis: null,
+              error: 'ダウンロード失敗',
+            }
+          }
+
+          const analysis = await analyzeVideoWithGemini(buffer)
+          return {
+            videoId: video.id,
+            videoUrl: video.url,
+            desc: video.desc,
+            stats: {
+              playCount: video.stats.playCount,
+              likeCount: video.stats.likeCount,
+              commentCount: video.stats.commentCount,
+              shareCount: video.stats.shareCount,
+            },
+            analysis,
+            error: analysis ? undefined : 'Gemini分析失敗',
+          }
+        } catch (error) {
+          console.error(`Video analysis error for ${video.id}:`, error)
+          return {
+            videoId: video.id,
+            videoUrl: video.url,
+            desc: video.desc,
+            stats: {
+              playCount: video.stats.playCount,
+              likeCount: video.stats.likeCount,
+              commentCount: video.stats.commentCount,
+              shareCount: video.stats.shareCount,
+            },
+            analysis: null,
+            error: '分析中にエラー発生',
+          }
+        }
+      })
+    )
+
+    results.push(...batchResults)
+  }
+
+  return results
 }
