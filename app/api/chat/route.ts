@@ -7,6 +7,337 @@ import { analyzeVideoWithGemini, analyzeYouTubeWithGemini } from '@/lib/api/gemi
 import { getKnowledgeSummary, getCreatorSummary, AVAILABLE_CREATORS, CreatorInfo } from '@/lib/knowledge/loader'
 import { VideoAnalysisResult } from '@/lib/types'
 
+// アカウント統計のインターフェース
+interface AccountStats {
+  // 基本指標
+  videoCount: number
+  totalViews: number
+  avgViews: number
+  totalLikes: number
+  avgLikes: number
+
+  // エンゲージメント詳細
+  lvr: number  // Like-to-View Ratio (%)
+  cvr: number  // Comment-to-View Ratio (%)
+  svr: number  // Share-to-View Ratio (%)
+  saveRate: number  // Save Rate (%)
+  totalEngagementRate: number  // 総合エンゲージメント率
+
+  // パフォーマンス分布
+  maxViews: number
+  minViews: number
+  medianViews: number
+  stdDevViews: number
+  buzzVideoRate: number  // 平均の2倍超の割合(%)
+
+  // 時系列
+  postingFrequency: string
+  avgDaysBetweenPosts: number
+}
+
+// TikTok業界平均値（参考値）
+const INDUSTRY_BENCHMARKS = {
+  lvr: 4.5,      // いいね率 4.5%
+  cvr: 0.2,      // コメント率 0.2%
+  svr: 0.15,     // シェア率 0.15%
+  saveRate: 0.5, // 保存率 0.5%
+}
+
+// 統計計算関数
+function calculateAccountStats(videos: TikTokVideo[]): AccountStats {
+  if (videos.length === 0) {
+    return {
+      videoCount: 0,
+      totalViews: 0,
+      avgViews: 0,
+      totalLikes: 0,
+      avgLikes: 0,
+      lvr: 0,
+      cvr: 0,
+      svr: 0,
+      saveRate: 0,
+      totalEngagementRate: 0,
+      maxViews: 0,
+      minViews: 0,
+      medianViews: 0,
+      stdDevViews: 0,
+      buzzVideoRate: 0,
+      postingFrequency: '不明',
+      avgDaysBetweenPosts: 0,
+    }
+  }
+
+  // 基本集計
+  let totalViews = 0
+  let totalLikes = 0
+  let totalComments = 0
+  let totalShares = 0
+  let totalSaves = 0
+  const viewsList: number[] = []
+
+  videos.forEach((video) => {
+    totalViews += video.stats.playCount
+    totalLikes += video.stats.likeCount
+    totalComments += video.stats.commentCount
+    totalShares += video.stats.shareCount
+    totalSaves += video.stats.collectCount || 0
+    viewsList.push(video.stats.playCount)
+  })
+
+  const avgViews = Math.round(totalViews / videos.length)
+  const avgLikes = Math.round(totalLikes / videos.length)
+
+  // エンゲージメント率計算
+  const lvr = totalViews > 0 ? (totalLikes / totalViews) * 100 : 0
+  const cvr = totalViews > 0 ? (totalComments / totalViews) * 100 : 0
+  const svr = totalViews > 0 ? (totalShares / totalViews) * 100 : 0
+  const saveRate = totalViews > 0 ? (totalSaves / totalViews) * 100 : 0
+  const totalEngagementRate = totalViews > 0
+    ? ((totalLikes + totalComments + totalShares + totalSaves) / totalViews) * 100
+    : 0
+
+  // パフォーマンス分布
+  const sortedViews = [...viewsList].sort((a, b) => a - b)
+  const maxViews = sortedViews[sortedViews.length - 1]
+  const minViews = sortedViews[0]
+  const medianViews = sortedViews.length % 2 === 0
+    ? Math.round((sortedViews[sortedViews.length / 2 - 1] + sortedViews[sortedViews.length / 2]) / 2)
+    : sortedViews[Math.floor(sortedViews.length / 2)]
+
+  // 標準偏差
+  const variance = viewsList.reduce((sum, v) => sum + Math.pow(v - avgViews, 2), 0) / viewsList.length
+  const stdDevViews = Math.round(Math.sqrt(variance))
+
+  // バズ動画率（平均の2倍超）
+  const buzzThreshold = avgViews * 2
+  const buzzVideoCount = viewsList.filter(v => v > buzzThreshold).length
+  const buzzVideoRate = (buzzVideoCount / videos.length) * 100
+
+  // 投稿頻度計算
+  let postingFrequency = '不明'
+  let avgDaysBetweenPosts = 0
+  if (videos.length >= 2) {
+    const timestamps = videos.map(v => v.createTime).sort((a, b) => b - a)
+    const daysDiff = (timestamps[0] - timestamps[timestamps.length - 1]) / (60 * 60 * 24)
+    avgDaysBetweenPosts = daysDiff / (videos.length - 1)
+
+    if (avgDaysBetweenPosts <= 1) {
+      postingFrequency = '毎日'
+    } else if (avgDaysBetweenPosts <= 2) {
+      postingFrequency = '2日に1回'
+    } else if (avgDaysBetweenPosts <= 3.5) {
+      postingFrequency = '週2-3回'
+    } else if (avgDaysBetweenPosts <= 7) {
+      postingFrequency = '週1回'
+    } else if (avgDaysBetweenPosts <= 14) {
+      postingFrequency = '2週に1回'
+    } else {
+      postingFrequency = '月1-2回'
+    }
+  }
+
+  return {
+    videoCount: videos.length,
+    totalViews,
+    avgViews,
+    totalLikes,
+    avgLikes,
+    lvr,
+    cvr,
+    svr,
+    saveRate,
+    totalEngagementRate,
+    maxViews,
+    minViews,
+    medianViews,
+    stdDevViews,
+    buzzVideoRate,
+    postingFrequency,
+    avgDaysBetweenPosts,
+  }
+}
+
+// 業界平均との比較評価
+function getComparisonLabel(value: number, benchmark: number): string {
+  const ratio = value / benchmark
+  if (ratio >= 1.5) return '🔥 優秀'
+  if (ratio >= 1.0) return '✅ 平均以上'
+  if (ratio >= 0.7) return '➖ 平均'
+  return '⚠️ 要改善'
+}
+
+// 定量分析レポート生成
+function generateQuantitativeReport(stats: AccountStats, username: string): string {
+  const today = new Date().toISOString().split('T')[0]
+
+  let report = `# 📊 アカウント分析レポート
+**対象**: @${username} | **プラットフォーム**: TikTok | **分析日**: ${today}
+
+---
+
+## 1. エグゼクティブサマリー
+*（AIが動画分析結果を踏まえて生成）*
+
+---
+
+## 2. 定量分析
+
+### 2.1 基本指標
+| 指標 | 値 |
+|------|-----|
+| 分析動画数 | ${stats.videoCount}件 |
+| 総再生数 | ${stats.totalViews.toLocaleString()} |
+| 平均再生数 | ${stats.avgViews.toLocaleString()} |
+| 総いいね数 | ${stats.totalLikes.toLocaleString()} |
+| 平均いいね数 | ${stats.avgLikes.toLocaleString()} |
+
+### 2.2 エンゲージメント詳細
+| 指標 | 値 | 業界平均比較 |
+|------|-----|-------------|
+| LVR（いいね率） | ${stats.lvr.toFixed(2)}% | ${getComparisonLabel(stats.lvr, INDUSTRY_BENCHMARKS.lvr)} |
+| CVR（コメント率） | ${stats.cvr.toFixed(3)}% | ${getComparisonLabel(stats.cvr, INDUSTRY_BENCHMARKS.cvr)} |
+| SVR（シェア率） | ${stats.svr.toFixed(3)}% | ${getComparisonLabel(stats.svr, INDUSTRY_BENCHMARKS.svr)} |
+| 保存率 | ${stats.saveRate.toFixed(3)}% | ${getComparisonLabel(stats.saveRate, INDUSTRY_BENCHMARKS.saveRate)} |
+| **総合ER** | **${stats.totalEngagementRate.toFixed(2)}%** | - |
+
+### 2.3 パフォーマンス分布
+| 指標 | 値 |
+|------|-----|
+| 最大再生数 | ${stats.maxViews.toLocaleString()} |
+| 最小再生数 | ${stats.minViews.toLocaleString()} |
+| 中央値 | ${stats.medianViews.toLocaleString()} |
+| 標準偏差 | ${stats.stdDevViews.toLocaleString()} |
+| バズ動画率（平均2倍超） | ${stats.buzzVideoRate.toFixed(0)}% |
+
+### 2.4 投稿頻度
+- 投稿ペース: **${stats.postingFrequency}**
+- 平均投稿間隔: ${stats.avgDaysBetweenPosts.toFixed(1)}日
+
+---
+
+`
+  return report
+}
+
+// 動画ランキング生成
+function generateVideoRanking(
+  videos: TikTokVideo[],
+  analysisResults: VideoAnalysisResult[]
+): string {
+  // 再生数でソート
+  const sortedVideos = [...videos].sort((a, b) => b.stats.playCount - a.stats.playCount)
+  const top3 = sortedVideos.slice(0, 3)
+  const worst = sortedVideos[sortedVideos.length - 1]
+
+  // 分析結果をマップ化
+  const analysisMap = new Map<string, VideoAnalysisResult>()
+  analysisResults.forEach(r => analysisMap.set(r.videoId, r))
+
+  let report = `## 4. 動画別分析（Top 3 + 要改善 1）
+
+`
+
+  // Top 3
+  const medals = ['🏆', '🥈', '🥉']
+  top3.forEach((video, index) => {
+    const er = video.stats.playCount > 0
+      ? ((video.stats.likeCount + video.stats.commentCount + video.stats.shareCount) / video.stats.playCount * 100).toFixed(2)
+      : '0'
+    const analysis = analysisMap.get(video.id)
+
+    report += `### ${medals[index]} ${index + 1}位: ${video.desc.slice(0, 40) || '(説明なし)'}${video.desc.length > 40 ? '...' : ''}
+- **再生**: ${video.stats.playCount.toLocaleString()} / **いいね**: ${video.stats.likeCount.toLocaleString()} / **ER**: ${er}%
+- URL: ${video.url}
+${analysis?.analysis ? `- **AI分析**: ${analysis.analysis.slice(0, 200)}...` : ''}
+
+`
+  })
+
+  // Worst
+  if (worst && worst.id !== top3[top3.length - 1]?.id) {
+    const worstEr = worst.stats.playCount > 0
+      ? ((worst.stats.likeCount + worst.stats.commentCount + worst.stats.shareCount) / worst.stats.playCount * 100).toFixed(2)
+      : '0'
+    const worstAnalysis = analysisMap.get(worst.id)
+
+    report += `### ⚠️ 要改善: ${worst.desc.slice(0, 40) || '(説明なし)'}${worst.desc.length > 40 ? '...' : ''}
+- **再生**: ${worst.stats.playCount.toLocaleString()} / **いいね**: ${worst.stats.likeCount.toLocaleString()} / **ER**: ${worstEr}%
+- URL: ${worst.url}
+${worstAnalysis?.analysis ? `- **AI分析**: ${worstAnalysis.analysis.slice(0, 200)}...` : ''}
+
+`
+  }
+
+  report += `---
+
+`
+  return report
+}
+
+// 定性分析プロンプト生成
+function generateQualitativePrompt(analysisResults: VideoAnalysisResult[]): string {
+  const successfulAnalyses = analysisResults.filter(r => r.analysis).length
+
+  let report = `## 3. 定性分析
+
+*以下の観点でAIが分析結果を生成します（${successfulAnalyses}件の動画分析に基づく）*
+
+### 3.1 コンテンツ構成分析
+| 要素 | 現状 | 評価 |
+|------|------|------|
+| フック（冒頭2秒） | *AI分析* | *AI評価* |
+| 構成パターン | *AI分析* | *AI評価* |
+| CTA | *AI分析* | *AI評価* |
+| テロップ使用 | *AI分析* | *AI評価* |
+
+### 3.2 ブランディング分析
+- **世界観の一貫性**: *AI分析*
+- **差別化ポイント**: *AI分析*
+- **ターゲット層**: *AI分析*
+- **トーン&マナー**: *AI分析*
+
+### 3.3 競合比較観点
+- **ジャンル内ポジション**: *AI分析*
+- **競合との差別化**: *AI分析*
+- **未開拓の機会**: *AI分析*
+
+---
+
+## 5. 改善提案（優先度順）
+
+### 🔴 最優先（すぐ実施）
+*AIが具体的なアクションを提案*
+
+### 🟡 中期（1ヶ月以内）
+*AIが具体的なアクションを提案*
+
+### 🟢 長期（3ヶ月以内）
+*AIが具体的なアクションを提案*
+
+---
+
+## 6. 次のアクション
+*AIがチェックリスト形式で提案*
+
+---
+
+## 動画分析詳細データ
+
+`
+
+  // 各動画の分析詳細を追加
+  analysisResults.forEach((result, index) => {
+    report += `### 動画${index + 1}: ${result.desc.slice(0, 50) || '(説明なし)'}
+- URL: ${result.videoUrl}
+- 再生: ${result.stats.playCount.toLocaleString()} / いいね: ${result.stats.likeCount.toLocaleString()}
+
+${result.analysis ? `**Gemini分析:**\n${result.analysis}\n` : `**分析エラー:** ${result.error || '不明'}\n`}
+`
+  })
+
+  return report
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { messages, creators } = await req.json()
@@ -329,7 +660,7 @@ async function analyzeTikTokProfile(
   url: string,
   onProgress: (stage: string) => void
 ): Promise<string> {
-  let context = `\n\n## 分析対象プロフィール\n- URL: ${url}\n- プラットフォーム: TikTok\n`
+  let context = ''
   const errors: string[] = []
 
   try {
@@ -337,75 +668,45 @@ async function analyzeTikTokProfile(
     const userVideos = await getTikTokUserVideos(url, 10)
 
     if (userVideos && userVideos.videos.length > 0) {
-      context += `\n### ユーザー: @${userVideos.username}\n`
+      // 1. 定量分析：統計を計算
+      const stats = calculateAccountStats(userVideos.videos)
 
-      // Calculate total stats
-      let totalViews = 0
-      let totalLikes = 0
-      let totalComments = 0
-      let totalShares = 0
+      // 2. 定量分析レポート生成
+      context = generateQuantitativeReport(stats, userVideos.username)
 
-      userVideos.videos.forEach((video) => {
-        totalViews += video.stats.playCount
-        totalLikes += video.stats.likeCount
-        totalComments += video.stats.commentCount
-        totalShares += video.stats.shareCount
-      })
-
-      // Add summary stats first
-      const avgViews = Math.round(totalViews / userVideos.videos.length)
-      const avgLikes = Math.round(totalLikes / userVideos.videos.length)
-      const avgEngagement = totalViews > 0
-        ? ((totalLikes + totalComments + totalShares) / totalViews * 100).toFixed(2)
-        : '0'
-
-      context += `\n### サマリー統計\n`
-      context += `- 動画数: ${userVideos.videos.length}件\n`
-      context += `- 総再生数: ${totalViews.toLocaleString()}\n`
-      context += `- 平均再生数: ${avgViews.toLocaleString()}\n`
-      context += `- 総いいね数: ${totalLikes.toLocaleString()}\n`
-      context += `- 平均いいね数: ${avgLikes.toLocaleString()}\n`
-      context += `- 平均エンゲージメント率: ${avgEngagement}%\n`
-
-      // Analyze videos in batches (3 at a time)
+      // 3. 動画分析（3件ずつ並列）
       const analysisResults = await analyzeVideosInBatches(
         userVideos.videos,
         3,
         onProgress
       )
 
-      // Add individual video analysis results
-      context += `\n### 動画分析結果（${analysisResults.length}/${userVideos.videos.length}件成功）\n`
+      // 4. 定性分析プロンプト生成
+      context += generateQualitativePrompt(analysisResults)
 
-      analysisResults.forEach((result, index) => {
-        context += `\n#### ${index + 1}. ${result.desc.slice(0, 50) || '(説明なし)'}${result.desc.length > 50 ? '...' : ''}\n`
-        context += `- URL: ${result.videoUrl}\n`
-        context += `- 再生: ${result.stats.playCount.toLocaleString()} / いいね: ${result.stats.likeCount.toLocaleString()}\n`
+      // 5. 動画ランキング生成
+      context += generateVideoRanking(userVideos.videos, analysisResults)
 
-        if (result.analysis) {
-          context += `\n**Gemini分析結果:**\n${result.analysis}\n`
-        } else if (result.error) {
-          context += `- 分析エラー: ${result.error}\n`
-        }
-      })
-
-      // Find best performing video
-      const bestVideo = userVideos.videos.reduce((best, current) =>
-        current.stats.playCount > best.stats.playCount ? current : best
-      )
-      context += `\n### 最高再生動画\n`
-      context += `- タイトル: ${bestVideo.desc.slice(0, 50) || '(説明なし)'}\n`
-      context += `- URL: ${bestVideo.url}\n`
-      context += `- 再生数: ${bestVideo.stats.playCount.toLocaleString()}\n`
-
-      // Generate overall summary prompt for Gemini
+      // 6. AI向け指示を追加
       onProgress('全体サマリーを生成中...')
-      context += `\n### 全体傾向分析（AI生成対象）\n`
-      context += `上記${analysisResults.length}件の動画分析結果を踏まえて、以下の観点でサマリーを生成してください：\n`
-      context += `- 共通するコンテンツパターン\n`
-      context += `- フック（冒頭）の傾向\n`
-      context += `- 強み・成功要因\n`
-      context += `- 改善の余地がある点\n`
+      context += `
+---
+
+## AI分析指示
+
+上記のデータを踏まえて、以下のセクションを**具体的に**埋めてください：
+
+1. **エグゼクティブサマリー**: 3-5行で全体評価と主要改善ポイントを要約
+2. **定性分析（3.1〜3.3）**: 表の「*AI分析*」「*AI評価*」部分を具体的な内容で置き換え
+3. **改善提案（5章）**: 優先度別に具体的なアクションを提案
+4. **次のアクション（6章）**: チェックリスト形式で実践項目を提案
+
+**注意**:
+- 定量データに基づいた根拠を示す
+- 業界平均比較を活用して評価する
+- 具体的な改善例を挙げる（例: 「フックを〇〇に変更」）
+- 実践可能なアクションを優先する
+`
 
     } else {
       errors.push('プロフィール情報の取得に失敗しました（APIキー未設定またはアカウントが非公開）')
