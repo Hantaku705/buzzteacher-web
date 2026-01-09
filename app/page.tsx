@@ -93,10 +93,11 @@ export default function Home() {
       if (response.ok) {
         const data = await response.json()
         setMessages(
-          data.messages?.map((m: { id: string; role: 'user' | 'assistant'; content: string; created_at: string }) => ({
+          data.messages?.map((m: { id: string; role: 'user' | 'assistant'; content: string; creators?: string[]; created_at: string }) => ({
             id: m.id,
             role: m.role,
             content: m.content,
+            creators: m.creators,
             createdAt: new Date(m.created_at),
           })) || []
         )
@@ -137,12 +138,12 @@ export default function Home() {
     window.location.href = '/auth/login'
   }, [supabase.auth])
 
-  const saveMessage = useCallback(async (conversationId: string, role: 'user' | 'assistant', content: string) => {
+  const saveMessage = useCallback(async (conversationId: string, role: 'user' | 'assistant', content: string, creators?: string[]) => {
     try {
       await fetch(`/api/conversations/${conversationId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role, content }),
+        body: JSON.stringify({ role, content, creators }),
       })
     } catch (error) {
       console.error('Failed to save message:', error)
@@ -187,7 +188,7 @@ export default function Home() {
       await saveMessage(convId, 'user', content)
     }
 
-    // Create placeholder for assistant message
+    // Create placeholder for assistant message with creators
     const assistantMessageId = (Date.now() + 1).toString()
     setMessages((prev) => [
       ...prev,
@@ -195,6 +196,7 @@ export default function Home() {
         id: assistantMessageId,
         role: 'assistant',
         content: '',
+        creators: selectedCreators,
         createdAt: new Date(),
       },
     ])
@@ -317,7 +319,7 @@ export default function Home() {
 
       // Save assistant message (only for authenticated users)
       if (user && convId && fullContent) {
-        await saveMessage(convId, 'assistant', fullContent)
+        await saveMessage(convId, 'assistant', fullContent, selectedCreators)
         await loadConversations()
       }
     } catch (error) {

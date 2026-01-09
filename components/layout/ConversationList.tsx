@@ -2,67 +2,7 @@
 
 import { useState } from 'react'
 import { Conversation } from '@/lib/types'
-import { AVAILABLE_CREATORS } from '@/lib/knowledge/loader'
-
-function getInitial(name: string): string {
-  return name.charAt(0)
-}
-
-function CreatorIcons({ creatorIds }: { creatorIds: string[] }) {
-  const creators = creatorIds
-    .map(id => AVAILABLE_CREATORS.find(c => c.id === id))
-    .filter(Boolean)
-    .slice(0, 3)
-
-  const extraCount = creatorIds.length - 3
-
-  if (creators.length === 0) {
-    // デフォルト: ど素人ホテル
-    const defaultCreator = AVAILABLE_CREATORS[0]
-    return (
-      <div className="w-5 h-5 rounded-full bg-emerald-600 flex items-center justify-center text-white text-[10px] font-medium shrink-0">
-        {getInitial(defaultCreator.name)}
-      </div>
-    )
-  }
-
-  return (
-    <div className="relative flex items-center shrink-0" style={{ width: `${20 + (creators.length - 1) * 10}px`, height: '20px' }}>
-      {creators.map((creator, index) => (
-        <div
-          key={creator!.id}
-          className="absolute w-5 h-5 rounded-full bg-emerald-600 flex items-center justify-center text-white text-[10px] font-medium border border-[#202123]"
-          style={{
-            left: `${index * 10}px`,
-            zIndex: 3 - index,
-          }}
-          title={creator!.name}
-        >
-          {creator!.imageUrl ? (
-            <img
-              src={creator!.imageUrl}
-              alt={creator!.name}
-              className="w-full h-full rounded-full object-cover"
-            />
-          ) : (
-            getInitial(creator!.name)
-          )}
-        </div>
-      ))}
-      {extraCount > 0 && (
-        <div
-          className="absolute w-5 h-5 rounded-full bg-gray-600 flex items-center justify-center text-white text-[10px] font-medium border border-[#202123]"
-          style={{
-            left: `${creators.length * 10}px`,
-            zIndex: 0,
-          }}
-        >
-          +{extraCount}
-        </div>
-      )}
-    </div>
-  )
-}
+import { CreatorIcons } from '@/components/shared/CreatorIcons'
 
 interface ConversationListProps {
   conversations: Conversation[]

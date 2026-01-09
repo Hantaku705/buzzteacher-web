@@ -31,8 +31,13 @@ CREATE TABLE IF NOT EXISTS public.messages (
   conversation_id UUID REFERENCES public.conversations(id) ON DELETE CASCADE NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
   content TEXT NOT NULL,
+  creators TEXT[] DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Migration: Add creators column to existing table
+-- Run this if table already exists:
+-- ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS creators TEXT[] DEFAULT NULL;
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON public.conversations(user_id);

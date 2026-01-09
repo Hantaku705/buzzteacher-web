@@ -68,7 +68,7 @@ export async function POST(
       return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
     }
 
-    const { role, content } = await request.json()
+    const { role, content, creators } = await request.json()
 
     const { data, error } = await supabase
       .from('messages')
@@ -76,6 +76,7 @@ export async function POST(
         conversation_id: id,
         role,
         content,
+        creators: creators || null,
       })
       .select()
       .single()

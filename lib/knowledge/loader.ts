@@ -1,22 +1,80 @@
+// SNSアカウント情報
+export interface SocialAccounts {
+  threads?: string
+  twitter?: string
+  tiktok?: string
+  youtube?: string
+  instagram?: string
+  note?: string
+}
+
 // Creator情報の型定義
 export interface CreatorInfo {
   id: string
   name: string
   description: string
   dataCount: number
-  imageUrl?: string  // プロフィール画像URL（オプション）
+  imageUrl?: string
+  accounts?: SocialAccounts
 }
 
 // 利用可能なcreator一覧
 export const AVAILABLE_CREATORS: CreatorInfo[] = [
-  { id: 'doshirouto', name: 'ど素人ホテル', description: '片岡力也 - 稀有度×プロセスエコノミー', dataCount: 4 },
-  { id: 'galileo', name: 'ガリレオ', description: '前薗孝彰 - アルゴリズム×構成術', dataCount: 0 },
-  { id: 'matsudake', name: 'マツダ家の日常', description: '関ミナティ - リサーチ×ブランド化', dataCount: 15 },
-  { id: 'yukos', name: 'ゆうこす', description: '菅本裕子 - 共感SNS×モテクリエイター', dataCount: 16 },
-  { id: 'satoyu', name: 'SATOYU', description: 'OHIOBOSS - グローバル×ミーム文化', dataCount: 0 },
-  { id: 'kagei', name: '景井ひな', description: 'TikTokクリエイター - 爆発的成長×親しみやすさ', dataCount: 0 },
-  { id: 'gokkoclub', name: 'ごっこ倶楽部', description: '縦型ショートドラマ - ストーリー×感情', dataCount: 15 },
+  {
+    id: 'doshirouto',
+    name: 'ど素人ホテル',
+    description: '片岡力也 - 稀有度×プロセスエコノミー',
+    dataCount: 4,
+    accounts: { threads: '4610_hotel', twitter: '4610_hotel' }
+  },
+  {
+    id: 'galileo',
+    name: 'ガリレオ',
+    description: '前薗孝彰 - アルゴリズム×構成術',
+    dataCount: 0,
+    accounts: { twitter: 'galileo_tiktok', tiktok: 'galileotiktok' }
+  },
+  {
+    id: 'matsudake',
+    name: 'マツダ家の日常',
+    description: '関ミナティ - リサーチ×ブランド化',
+    dataCount: 15,
+    accounts: { tiktok: 'matsudafamily', youtube: 'UCKrIPBpUuS0xFYgL_3LMPGw', instagram: 'matsudafamily' }
+  },
+  {
+    id: 'yukos',
+    name: 'ゆうこす',
+    description: '菅本裕子 - 共感SNS×モテクリエイター',
+    dataCount: 16,
+    accounts: { twitter: 'yukos_kawaii', tiktok: 'yukos0520', instagram: 'yukos0520', note: 'yukosnote' }
+  },
+  {
+    id: 'satoyu',
+    name: 'SATOYU',
+    description: 'OHIOBOSS - グローバル×ミーム文化',
+    dataCount: 0,
+    accounts: { twitter: 'satoyu0704', tiktok: 'satoyu727', instagram: 'satoyuohioboss' }
+  },
+  {
+    id: 'kagei',
+    name: '景井ひな',
+    description: 'TikTokクリエイター - 爆発的成長×親しみやすさ',
+    dataCount: 0,
+    accounts: { twitter: 'hinatter0219', tiktok: 'kageihina', instagram: 'kagei_hina' }
+  },
+  {
+    id: 'gokkoclub',
+    name: 'ごっこ倶楽部',
+    description: '縦型ショートドラマ - ストーリー×感情',
+    dataCount: 15,
+    accounts: { twitter: 'gokko5club', tiktok: 'gokko5club', youtube: 'UChbyqrxREoPtmUmYaxUAGqA', instagram: 'gokko5club' }
+  },
 ]
+
+// CreatorIdからCreatorInfoを取得
+export function getCreatorById(id: string): CreatorInfo | undefined {
+  return AVAILABLE_CREATORS.find(c => c.id === id)
+}
 
 // creator別のサマリー定義
 const CREATOR_SUMMARIES: Record<string, string> = {

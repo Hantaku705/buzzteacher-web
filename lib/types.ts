@@ -10,6 +10,7 @@ export interface Message {
   conversation_id?: string
   role: 'user' | 'assistant'
   content: string
+  creators?: string[]
   createdAt: Date
   creatorSections?: CreatorSection[]
 }

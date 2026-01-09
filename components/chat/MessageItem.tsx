@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Message, CreatorSection } from '@/lib/types'
+import { CreatorIcons } from '@/components/shared/CreatorIcons'
 
 interface MessageItemProps {
   message: Message
@@ -217,13 +218,21 @@ export function MessageItem({ message, onRetry, onRegenerate, onEdit, isLast, is
     <div className={`py-6 animate-fade-in-up ${isUser ? 'bg-[#343541]' : 'bg-[#444654]'}`}>
       <div className="max-w-3xl mx-auto px-6 md:px-8 flex gap-4">
         {/* Avatar */}
-        <div
-          className={`w-8 h-8 rounded-sm flex items-center justify-center text-white text-sm font-medium shrink-0 ${
-            isUser ? 'bg-purple-600' : isError ? 'bg-red-600' : 'bg-emerald-600'
-          }`}
-        >
-          {isUser ? 'U' : isError ? '!' : 'BT'}
-        </div>
+        {isUser ? (
+          <div className="w-8 h-8 rounded-sm flex items-center justify-center text-white text-sm font-medium shrink-0 bg-purple-600">
+            U
+          </div>
+        ) : isError ? (
+          <div className="w-8 h-8 rounded-sm flex items-center justify-center text-white text-sm font-medium shrink-0 bg-red-600">
+            !
+          </div>
+        ) : message.creators && message.creators.length > 0 ? (
+          <CreatorIcons creatorIds={message.creators} size="md" />
+        ) : (
+          <div className="w-8 h-8 rounded-sm flex items-center justify-center text-white text-sm font-medium shrink-0 bg-emerald-600">
+            BT
+          </div>
+        )}
 
         {/* Content */}
         <div className="flex-1 text-white leading-relaxed">
