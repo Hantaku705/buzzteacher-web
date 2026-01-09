@@ -10,11 +10,11 @@ export interface CreatorInfo {
 export const AVAILABLE_CREATORS: CreatorInfo[] = [
   { id: 'doshirouto', name: 'ど素人ホテル', description: '片岡力也 - 稀有度×プロセスエコノミー', dataCount: 4 },
   { id: 'galileo', name: 'ガリレオ', description: '前薗孝彰 - アルゴリズム×構成術', dataCount: 0 },
-  { id: 'matsudake', name: 'マツダ家の日常', description: '関ミナティ - リサーチ×ブランド化', dataCount: 0 },
+  { id: 'matsudake', name: 'マツダ家の日常', description: '関ミナティ - リサーチ×ブランド化', dataCount: 15 },
   { id: 'yukos', name: 'ゆうこす', description: '菅本裕子 - 共感SNS×モテクリエイター', dataCount: 16 },
   { id: 'satoyu', name: 'SATOYU', description: 'OHIOBOSS - グローバル×ミーム文化', dataCount: 0 },
   { id: 'kagei', name: '景井ひな', description: 'TikTokクリエイター - 爆発的成長×親しみやすさ', dataCount: 0 },
-  { id: 'gokkoclub', name: 'ごっこ倶楽部', description: '縦型ショートドラマ - ストーリー×感情', dataCount: 0 },
+  { id: 'gokkoclub', name: 'ごっこ倶楽部', description: '縦型ショートドラマ - ストーリー×感情', dataCount: 15 },
 ]
 
 // creator別のサマリー定義
