@@ -193,6 +193,11 @@ async function analyzeVideoWithProgress(
   platform: string,
   onProgress: (stage: string) => void
 ): Promise<string> {
+  // Check if TikTok profile URL
+  if (platform === 'TikTok' && isTikTokProfileUrl(url)) {
+    return await analyzeTikTokProfile(url, onProgress)
+  }
+
   let context = `\n\n## 分析対象動画\n- URL: ${url}\n- プラットフォーム: ${platform}\n`
   const errors: string[] = []
 
@@ -317,4 +322,81 @@ ${analysisContext}
 ### 💡 次のアクション
 [すぐに実践できること]
 `
+}
+
+async function analyzeTikTokProfile(
+  url: string,
+  onProgress: (stage: string) => void
+): Promise<string> {
+  let context = `\n\n## 分析対象プロフィール\n- URL: ${url}\n- プラットフォーム: TikTok\n`
+  const errors: string[] = []
+
+  try {
+    onProgress('TikTokプロフィール情報を取得中...')
+    const userVideos = await getTikTokUserVideos(url, 10)
+
+    if (userVideos && userVideos.videos.length > 0) {
+      context += `\n### ユーザー: @${userVideos.username}\n`
+      context += `\n### 最新動画一覧（${userVideos.videos.length}件）\n`
+
+      // Calculate total stats
+      let totalViews = 0
+      let totalLikes = 0
+      let totalComments = 0
+      let totalShares = 0
+
+      userVideos.videos.forEach((video, index) => {
+        totalViews += video.stats.playCount
+        totalLikes += video.stats.likeCount
+        totalComments += video.stats.commentCount
+        totalShares += video.stats.shareCount
+
+        const date = new Date(video.createTime * 1000).toLocaleDateString('ja-JP')
+        context += `\n#### ${index + 1}. ${video.desc.slice(0, 50) || '(説明なし)'}${video.desc.length > 50 ? '...' : ''}\n`
+        context += `- URL: ${video.url}\n`
+        context += `- 投稿日: ${date}\n`
+        context += `- 再生: ${video.stats.playCount.toLocaleString()}\n`
+        context += `- いいね: ${video.stats.likeCount.toLocaleString()}\n`
+        context += `- コメント: ${video.stats.commentCount.toLocaleString()}\n`
+        context += `- シェア: ${video.stats.shareCount.toLocaleString()}\n`
+        context += `- 保存: ${video.stats.collectCount.toLocaleString()}\n`
+        context += `- 動画時間: ${video.durationSec}秒\n`
+      })
+
+      // Add summary stats
+      const avgViews = Math.round(totalViews / userVideos.videos.length)
+      const avgLikes = Math.round(totalLikes / userVideos.videos.length)
+      const avgEngagement = totalViews > 0
+        ? ((totalLikes + totalComments + totalShares) / totalViews * 100).toFixed(2)
+        : '0'
+
+      context += `\n### サマリー統計\n`
+      context += `- 総再生数: ${totalViews.toLocaleString()}\n`
+      context += `- 平均再生数: ${avgViews.toLocaleString()}\n`
+      context += `- 総いいね数: ${totalLikes.toLocaleString()}\n`
+      context += `- 平均いいね数: ${avgLikes.toLocaleString()}\n`
+      context += `- 平均エンゲージメント率: ${avgEngagement}%\n`
+
+      // Find best performing video
+      const bestVideo = userVideos.videos.reduce((best, current) =>
+        current.stats.playCount > best.stats.playCount ? current : best
+      )
+      context += `\n### 最高再生動画\n`
+      context += `- タイトル: ${bestVideo.desc.slice(0, 50) || '(説明なし)'}\n`
+      context += `- URL: ${bestVideo.url}\n`
+      context += `- 再生数: ${bestVideo.stats.playCount.toLocaleString()}\n`
+    } else {
+      errors.push('プロフィール情報の取得に失敗しました（APIキー未設定またはアカウントが非公開）')
+    }
+  } catch (error) {
+    console.error('Profile analysis error:', error)
+    errors.push('プロフィール分析中に予期せぬエラーが発生しました')
+  }
+
+  if (errors.length > 0) {
+    context += `\n### 分析の制限事項\n${errors.map(e => `- ${e}`).join('\n')}\n`
+    context += `\n※ URLのみでアドバイスを行います。\n`
+  }
+
+  return context
 }

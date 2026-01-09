@@ -64,6 +64,37 @@ test.describe('BuzzTeacher Chat', () => {
     await expect(assistantMessage).toBeVisible({ timeout: 120000 })
   })
 
+  test('should handle TikTok profile URL input', async ({ page }) => {
+    test.setTimeout(180000) // 3 minutes for profile analysis
+
+    const tiktokProfileUrl = 'https://www.tiktok.com/@4610_hotel'
+
+    // Type TikTok profile URL
+    const input = page.locator('textarea')
+    await expect(input).toBeVisible()
+    await input.click()
+    await input.fill(tiktokProfileUrl)
+
+    // Verify input value
+    await expect(input).toHaveValue(tiktokProfileUrl)
+
+    // Click send
+    const sendButton = page.locator('button[type="submit"]')
+    await expect(sendButton).toBeEnabled()
+    await sendButton.click()
+
+    // Wait for user message to appear in chat
+    await expect(page.getByText(tiktokProfileUrl)).toBeVisible({ timeout: 10000 })
+
+    // Wait for assistant response (with progress or final response)
+    const assistantMessage = page.locator('[class*="bg-[#444654]"]').first()
+    await expect(assistantMessage).toBeVisible({ timeout: 120000 })
+
+    // Check that response contains some content
+    const responseText = await assistantMessage.textContent()
+    expect(responseText).toBeTruthy()
+  })
+
   test('should disable send button while loading', async ({ page }) => {
     test.setTimeout(90000)
 
