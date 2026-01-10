@@ -26,6 +26,8 @@ import {
 import {
   getKnowledgeSummary,
   getCreatorSummary,
+  getCreatorCases,
+  getCreatorTechniques,
   AVAILABLE_CREATORS,
   CreatorInfo,
 } from "@/lib/knowledge/loader";
@@ -759,6 +761,8 @@ export async function POST(req: NextRequest) {
     if (creatorsToAnalyze.length === 1) {
       const creatorId = creatorsToAnalyze[0];
       const knowledgeSummary = getCreatorSummary(creatorId);
+      const creatorCases = getCreatorCases(creatorId);
+      const creatorTechniques = getCreatorTechniques(creatorId);
       const creatorInfo =
         AVAILABLE_CREATORS.find((c) => c.id === creatorId) || null;
 
@@ -795,6 +799,8 @@ export async function POST(req: NextRequest) {
               knowledgeSummary,
               analysisContext,
               creatorInfo,
+              creatorCases,
+              creatorTechniques,
             );
             const chat = model.startChat({
               history,
@@ -885,10 +891,14 @@ export async function POST(req: NextRequest) {
 
             // Build prompt for this creator
             const knowledgeSummary = getCreatorSummary(creatorId);
+            const creatorCases = getCreatorCases(creatorId);
+            const creatorTechniques = getCreatorTechniques(creatorId);
             const systemPrompt = buildSystemPrompt(
               knowledgeSummary,
               analysisContext,
               creatorInfo,
+              creatorCases,
+              creatorTechniques,
             );
 
             const chat = model.startChat({
@@ -1220,6 +1230,8 @@ function buildSystemPrompt(
   knowledge: string,
   analysisContext: string,
   creatorInfo: CreatorInfo | null,
+  cases: string = "",
+  techniques: string = "",
 ): string {
   const roleDescription = creatorInfo
     ? `あなたは「${creatorInfo.name}」の視点でアドバイスするBuzzTeacherです。
@@ -1234,27 +1246,52 @@ ${creatorInfo.description}の観点から、具体的な改善点を提案して
 
 ${knowledge}
 
+${cases}
+
+${techniques}
+
 ${analysisContext}
 
 ## 回答のルール
-1. 具体的な改善点を箇条書きで提示する
-2. ナレッジに基づいた根拠を示す
-3. すぐに実践できるアクションを提案する
-4. 専門用語は避け、わかりやすく説明する
-5. 動画URLが送られたら、分析結果に基づいてアドバイスする
+1. **最初にターゲットと読後感を明示**: この動画が誰に向けて、どんな感情を与えたいかを理解する
+2. **改善提案はターゲット・読後感を維持**: 元の意図を変えない範囲で技法を適用する
+3. **成功事例から技法を抽出**: 事例そのものではなく「使える技法」を提案する
+4. **具体的なセリフ案を提示**: パワーワード集や構文テンプレートを活用する
+5. 専門用語は避け、わかりやすく説明する
 
 ## 回答フォーマット（動画分析時）
+
+### 🎯 この動画の理解
+**ターゲット**: [この動画が届けたい視聴者層]
+**読後感**: [視聴後に与えたい感情・行動]
+**現状の構成タイプ**: [稀有度型/ストリート型/プロセス型/ハウツー型/ドラマ型/etc]
+
 ### 📊 現状評価
-[インサイトに基づく評価]
+[ターゲットと読後感を踏まえた評価]
 
 ### ✅ 良い点
-[動画の強み]
+[動画の強み - ターゲットに対して効果的な点]
+
+### 📚 参考になる成功事例
+**事例**: [事例名]（[再生数]）
+**この事例から学べる技法**: [ターゲット・読後感を変えずに適用できる技法]
+**適用方法**: [具体的にどう取り入れるか]
 
 ### ⚠️ 改善点
-[具体的な改善提案]
+[具体的な改善提案 - ターゲット・読後感を維持しつつ]
+
+### 📝 ビフォーアフター台本案
+
+**現状のフック**:
+「[現在のセリフ/テロップ]」
+
+**改善案**（ターゲット・読後感を維持）:
+「[パワーワードを使った具体的なセリフ案]」
+→ テロップ: [画面に表示するテキスト]
+
+**なぜこの改善が有効か**: [ターゲットに対してなぜ効果的か - 技法集を引用]
 
 ### 📝 構成案（タイムライン）
-以下の表形式で、動画をアップデートするための構成案を提示してください：
 
 | 時間 | 内容 | ポイント |
 |------|------|----------|
@@ -1264,22 +1301,6 @@ ${analysisContext}
 | ラスト | **コメント誘導** | [参加要素、問いかけ] |
 
 ※ 動画の尺に合わせて時間を調整してください
-
-### 🎤 ナレーション案
-以下のフォーマットで具体的なセリフを提案してください：
-
-**[0:00-0:02] フック**
-「[パワーワードを含む具体的なセリフ案]」
-→ テロップ: [画面に表示するテキスト]
-
-**[0:02-0:07] 興味付け**
-「[期待感を煽るセリフ案]」
-
-**[0:07-] 本編**
-[展開の流れとキーセリフ]
-
-**[ラスト] コメント誘導**
-「[視聴者が反応したくなる問いかけ]」
 
 ### 💡 次のアクション
 [すぐに実践できること]
