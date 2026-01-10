@@ -527,19 +527,37 @@ JSONのみを出力してください。説明は不要です。`;
         // JSONをパース
         let discussionTurns: DiscussionTurn[] = [];
         try {
-          // ```json と ``` を除去
-          const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-          if (jsonMatch) {
-            discussionTurns = JSON.parse(jsonMatch[0]);
+          // コードブロックを除去
+          let jsonText = responseText
+            .replace(/```json\s*/gi, "")
+            .replace(/```\s*/g, "")
+            .trim();
+
+          // JSON配列を抽出（最初の [ から最後の ] まで）
+          const startIdx = jsonText.indexOf("[");
+          const endIdx = jsonText.lastIndexOf("]");
+
+          if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+            const jsonArray = jsonText.slice(startIdx, endIdx + 1);
+            discussionTurns = JSON.parse(jsonArray);
+          } else {
+            throw new Error("JSON array not found in response");
           }
         } catch (parseError) {
           console.error("Discussion JSON parse error:", parseError);
-          // パースに失敗した場合はテキストをそのまま1つの発言として扱う
+          console.error(
+            "Raw response (first 1000 chars):",
+            responseText.substring(0, 1000),
+          );
+
+          // フォールバック: Geminiに再度シンプルな形式で生成させる
+          // ここではエラーメッセージを表示
           discussionTurns = [
             {
               creatorId: previousAnalyses[0]?.creatorId || "unknown",
-              creatorName: previousAnalyses[0]?.creatorName || "審査員",
-              content: responseText,
+              creatorName: previousAnalyses[0]?.creatorName || "システム",
+              content:
+                "議論の生成中にエラーが発生しました。「再生成」ボタンで再試行してください。",
               replyTo: null,
             },
           ];
