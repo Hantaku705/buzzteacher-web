@@ -372,21 +372,38 @@ export async function POST(req: NextRequest) {
       ? creators
       : ['doshirouto']
 
-    // Helper to send progress events (with optional percent, current, total)
+    // Progress step type
+    interface ProgressStep {
+      id: string
+      label: string
+      status: 'pending' | 'in_progress' | 'completed' | 'error'
+      detail?: string
+    }
+
+    // Helper to send progress events (with optional percent, current, total, steps)
     const sendProgress = (
       controller: ReadableStreamDefaultController,
       stage: string,
       percent?: number,
       current?: number,
-      total?: number
+      total?: number,
+      steps?: ProgressStep[]
     ) => {
-      const event: { type: string; stage: string; percent?: number; current?: number; total?: number } = {
+      const event: {
+        type: string
+        stage: string
+        percent?: number
+        current?: number
+        total?: number
+        steps?: ProgressStep[]
+      } = {
         type: 'progress',
         stage
       }
       if (percent !== undefined) event.percent = percent
       if (current !== undefined) event.current = current
       if (total !== undefined) event.total = total
+      if (steps) event.steps = steps
       controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`))
     }
 
@@ -405,7 +422,7 @@ export async function POST(req: NextRequest) {
               analysisContext = await analyzeVideoWithProgress(
                 videoUrl,
                 platform,
-                (stage, percent, current, total) => sendProgress(controller, stage, percent, current, total)
+                (stage, percent, current, total, steps) => sendProgress(controller, stage, percent, current, total, steps)
               )
             }
 
@@ -460,7 +477,7 @@ export async function POST(req: NextRequest) {
             analysisContext = await analyzeVideoWithProgress(
               videoUrl,
               platform,
-              (stage, percent, current, total) => sendProgress(controller, stage, percent, current, total)
+              (stage, percent, current, total, steps) => sendProgress(controller, stage, percent, current, total, steps)
             )
           }
 
@@ -544,7 +561,7 @@ export async function POST(req: NextRequest) {
 async function analyzeVideoWithProgress(
   url: string,
   platform: string,
-  onProgress: (stage: string, percent?: number, current?: number, total?: number) => void
+  onProgress: (stage: string, percent?: number, current?: number, total?: number, steps?: ProgressStepType[]) => void
 ): Promise<string> {
   // Check if TikTok profile URL
   if (platform === 'TikTok' && isTikTokProfileUrl(url)) {
@@ -677,29 +694,69 @@ ${analysisContext}
 `
 }
 
+// Progress step type (for function signature)
+interface ProgressStepType {
+  id: string
+  label: string
+  status: 'pending' | 'in_progress' | 'completed' | 'error'
+  detail?: string
+}
+
 async function analyzeTikTokProfile(
   url: string,
-  onProgress: (stage: string, percent?: number, current?: number, total?: number) => void
+  onProgress: (stage: string, percent?: number, current?: number, total?: number, steps?: ProgressStepType[]) => void
 ): Promise<string> {
   let context = ''
   const errors: string[] = []
 
+  // ステップ管理
+  const steps: ProgressStepType[] = [
+    { id: 'profile', label: 'プロフィール情報を取得', status: 'pending' },
+    { id: 'videos', label: '動画一覧を取得', status: 'pending' },
+    { id: 'analyze', label: '動画を分析', status: 'pending' },
+    { id: 'report', label: 'レポート生成', status: 'pending' },
+  ]
+
+  const updateStep = (id: string, status: ProgressStepType['status'], detail?: string) => {
+    const step = steps.find(s => s.id === id)
+    if (step) {
+      step.status = status
+      if (detail !== undefined) step.detail = detail
+    }
+  }
+
   try {
-    onProgress('TikTokプロフィール情報を取得中...')
+    // Step 1: プロフィール取得
+    updateStep('profile', 'in_progress')
+    onProgress('プロフィール情報を取得中...', 5, undefined, undefined, steps)
     const userVideos = await getTikTokUserVideos(url, 10)
 
     if (userVideos && userVideos.videos.length > 0) {
+      updateStep('profile', 'completed')
+      updateStep('videos', 'in_progress')
+      updateStep('videos', 'in_progress', `${userVideos.videos.length}件`)
+      onProgress('動画一覧を取得中...', 10, undefined, undefined, steps)
+
       // 1. 定量分析：統計を計算
       const stats = calculateAccountStats(userVideos.videos)
 
       // 2. 定量分析レポート生成
       context = generateQuantitativeReport(stats, userVideos.username)
 
-      // 3. 動画分析（5件ずつ並列）
+      updateStep('videos', 'completed', `${userVideos.videos.length}件`)
+      updateStep('analyze', 'in_progress')
+      onProgress('動画を分析中...', 15, undefined, undefined, steps)
+
+      // 3. 動画分析（5件ずつ並列）- ステップ付きコールバック
       const analysisResults = await analyzeVideosInBatches(
         userVideos.videos,
         5,
-        onProgress
+        (stage, percent, current, total) => {
+          if (current !== undefined && total !== undefined) {
+            updateStep('analyze', 'in_progress', `${current}/${total}`)
+          }
+          onProgress(stage, percent, current, total, steps)
+        }
       )
 
       // 4. 定性分析プロンプト生成
@@ -709,7 +766,9 @@ async function analyzeTikTokProfile(
       context += generateVideoRanking(userVideos.videos, analysisResults)
 
       // 6. AI向け指示を追加
-      onProgress('全体サマリーを生成中...')
+      updateStep('analyze', 'completed', `${userVideos.videos.length}件完了`)
+      updateStep('report', 'in_progress')
+      onProgress('レポートを生成中...', 90, undefined, undefined, steps)
       context += `
 ---
 
@@ -729,6 +788,8 @@ async function analyzeTikTokProfile(
 - 実践可能なアクションを優先する
 `
 
+      updateStep('report', 'completed')
+      onProgress('分析完了', 100, undefined, undefined, steps)
     } else {
       errors.push('プロフィール情報の取得に失敗しました（APIキー未設定またはアカウントが非公開）')
     }

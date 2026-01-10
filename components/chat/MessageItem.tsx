@@ -6,6 +6,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { Message, CreatorSection } from '@/lib/types'
 import { CreatorIcons } from '@/components/shared/CreatorIcons'
+import { AnalysisProgress, type ProgressStep } from './AnalysisProgress'
 
 interface MessageItemProps {
   message: Message
@@ -167,9 +168,10 @@ interface MessageItemFullProps extends MessageItemProps {
   isLoading?: boolean
   loadingStage?: string | null
   loadingPercent?: number | null
+  loadingSteps?: ProgressStep[] | null
 }
 
-export function MessageItem({ message, onRetry, onRegenerate, onEdit, isLast, isLoading, loadingStage, loadingPercent }: MessageItemFullProps) {
+export function MessageItem({ message, onRetry, onRegenerate, onEdit, isLast, isLoading, loadingStage, loadingPercent, loadingSteps }: MessageItemFullProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(message.content)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -299,35 +301,43 @@ export function MessageItem({ message, onRetry, onRegenerate, onEdit, isLast, is
               </ReactMarkdown>
             )
           ) : (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1">
-                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-                </div>
-                <span className="text-emerald-400 text-sm font-medium">
-                  {loadingStage || '処理中...'}
-                </span>
-                {loadingPercent !== null && loadingPercent !== undefined && (
-                  <span className="text-gray-400 text-sm">
-                    {loadingPercent}%
+            loadingSteps && loadingSteps.length > 0 ? (
+              <AnalysisProgress
+                stage={loadingStage || '処理中...'}
+                percent={loadingPercent}
+                steps={loadingSteps}
+              />
+            ) : (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1">
+                    <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                    <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                    <span className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                  </div>
+                  <span className="text-emerald-400 text-sm font-medium">
+                    {loadingStage || '処理中...'}
                   </span>
+                  {loadingPercent !== null && loadingPercent !== undefined && (
+                    <span className="text-gray-400 text-sm">
+                      {loadingPercent}%
+                    </span>
+                  )}
+                </div>
+                {/* Progress Bar */}
+                {loadingPercent !== null && loadingPercent !== undefined && (
+                  <div className="w-full max-w-xs bg-gray-700 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-emerald-500 h-2 rounded-full transition-all duration-300 ease-out"
+                      style={{ width: `${loadingPercent}%` }}
+                    />
+                  </div>
+                )}
+                {!loadingStage && (
+                  <span className="text-gray-400 text-xs">動画のダウンロードと分析には30秒〜1分ほどかかります</span>
                 )}
               </div>
-              {/* Progress Bar */}
-              {loadingPercent !== null && loadingPercent !== undefined && (
-                <div className="w-full max-w-xs bg-gray-700 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-emerald-500 h-2 rounded-full transition-all duration-300 ease-out"
-                    style={{ width: `${loadingPercent}%` }}
-                  />
-                </div>
-              )}
-              {!loadingStage && (
-                <span className="text-gray-400 text-xs">動画のダウンロードと分析には30秒〜1分ほどかかります</span>
-              )}
-            </div>
+            )
           )}
 
           {/* Regenerate button */}

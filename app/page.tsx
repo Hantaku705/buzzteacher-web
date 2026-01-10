@@ -6,12 +6,14 @@ import { MessageList } from '@/components/chat/MessageList'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Message, Conversation, User, CreatorSection } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
+import type { ProgressStep } from '@/components/chat/AnalysisProgress'
 
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [loadingStage, setLoadingStage] = useState<string | null>(null)
   const [loadingPercent, setLoadingPercent] = useState<number | null>(null)
+  const [loadingSteps, setLoadingSteps] = useState<ProgressStep[] | null>(null)
   const [selectedCreators, setSelectedCreators] = useState<string[]>(['doshirouto'])
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
@@ -253,6 +255,9 @@ export default function Home() {
                 if (json.percent !== undefined) {
                   setLoadingPercent(json.percent)
                 }
+                if (json.steps) {
+                  setLoadingSteps(json.steps)
+                }
               } else if (json.type === 'creator_start') {
                 currentSection = {
                   creatorId: json.creatorId,
@@ -339,6 +344,7 @@ export default function Home() {
       setIsLoading(false)
       setLoadingStage(null)
       setLoadingPercent(null)
+      setLoadingSteps(null)
     }
   }
 
@@ -498,6 +504,7 @@ export default function Home() {
               isLoading={isLoading}
               loadingStage={loadingStage}
               loadingPercent={loadingPercent}
+              loadingSteps={loadingSteps}
             />
           )}
           <div ref={messagesEndRef} />

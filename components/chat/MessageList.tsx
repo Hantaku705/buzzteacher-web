@@ -2,6 +2,7 @@
 
 import { Message } from '@/lib/types'
 import { MessageItem } from './MessageItem'
+import type { ProgressStep } from './AnalysisProgress'
 
 interface MessageListProps {
   messages: Message[]
@@ -10,9 +11,10 @@ interface MessageListProps {
   isLoading?: boolean
   loadingStage?: string | null
   loadingPercent?: number | null
+  loadingSteps?: ProgressStep[] | null
 }
 
-export function MessageList({ messages, onRegenerate, onEdit, isLoading, loadingStage, loadingPercent }: MessageListProps) {
+export function MessageList({ messages, onRegenerate, onEdit, isLoading, loadingStage, loadingPercent, loadingSteps }: MessageListProps) {
   return (
     <div className="flex flex-col">
       {messages.map((message, index) => (
@@ -23,6 +25,7 @@ export function MessageList({ messages, onRegenerate, onEdit, isLoading, loading
           isLoading={isLoading}
           loadingStage={loadingStage}
           loadingPercent={loadingPercent}
+          loadingSteps={loadingSteps}
           onRegenerate={onRegenerate}
           onEdit={onEdit}
         />
