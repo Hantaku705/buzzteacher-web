@@ -78,7 +78,7 @@ export function VideoDetailRow({
         <td className="px-2 py-3 text-center border-b border-gray-700">
           <button
             onClick={onToggle}
-            className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="min-h-[36px] min-w-[36px] p-2 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-600 rounded transition-all active:scale-95 active:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             aria-label={isExpanded ? "詳細を閉じる" : "詳細を見る"}
           >
             <svg
@@ -207,7 +207,7 @@ export function VideoDetailRow({
                   href={video.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors"
+                  className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 bg-gray-700 hover:bg-gray-600 active:bg-gray-500 active:scale-95 text-white text-sm rounded-lg transition-all"
                 >
                   <svg
                     className="w-4 h-4"

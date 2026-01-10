@@ -15,6 +15,7 @@ import { CreatorIcons } from "@/components/shared/CreatorIcons";
 import { AnalysisProgress, type ProgressStep } from "./AnalysisProgress";
 import { VideoAnalysisTable } from "./VideoAnalysisTable";
 import { FeedbackForm } from "./FeedbackForm";
+import { MessageSkeleton, VideoTableSkeleton } from "@/components/ui/skeleton";
 
 interface MessageItemProps {
   message: Message;
@@ -659,51 +660,72 @@ export function MessageItem({
               </>
             )
           ) : loadingSteps && loadingSteps.length > 0 ? (
-            <AnalysisProgress
-              stage={loadingStage || "処理中..."}
-              percent={loadingPercent}
-              steps={loadingSteps}
-            />
+            <div className="space-y-6">
+              <AnalysisProgress
+                stage={loadingStage || "処理中..."}
+                percent={loadingPercent}
+                steps={loadingSteps}
+              />
+              {/* Show skeleton preview while loading */}
+              <div className="mt-6 opacity-60">
+                {loadingStage?.includes("動画") ? (
+                  <VideoTableSkeleton />
+                ) : (
+                  <MessageSkeleton />
+                )}
+              </div>
+            </div>
           ) : (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1">
-                  <span
-                    className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce"
-                    style={{ animationDelay: "0ms" }}
-                  ></span>
-                  <span
-                    className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce"
-                    style={{ animationDelay: "150ms" }}
-                  ></span>
-                  <span
-                    className="w-2 h-2 bg-emerald-400 rounded-full animate-bounce"
-                    style={{ animationDelay: "300ms" }}
-                  ></span>
+            <div className="space-y-6">
+              {/* Enhanced loading header */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <div className="flex items-center gap-1">
+                      <span
+                        className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-bounce"
+                        style={{ animationDelay: "0ms" }}
+                      ></span>
+                      <span
+                        className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-bounce"
+                        style={{ animationDelay: "150ms" }}
+                      ></span>
+                      <span
+                        className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-bounce"
+                        style={{ animationDelay: "300ms" }}
+                      ></span>
+                    </div>
+                  </div>
+                  <span className="text-emerald-400 text-sm font-medium">
+                    {loadingStage || "分析を準備中..."}
+                  </span>
+                  {loadingPercent !== null && loadingPercent !== undefined && (
+                    <span className="text-emerald-300 text-sm font-semibold bg-emerald-500/20 px-2 py-0.5 rounded">
+                      {loadingPercent}%
+                    </span>
+                  )}
                 </div>
-                <span className="text-emerald-400 text-sm font-medium">
-                  {loadingStage || "処理中..."}
-                </span>
+                {/* Enhanced Progress Bar */}
                 {loadingPercent !== null && loadingPercent !== undefined && (
-                  <span className="text-gray-400 text-sm">
-                    {loadingPercent}%
+                  <div className="w-full max-w-md bg-gray-700 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-emerald-500 to-emerald-400 h-2.5 rounded-full transition-all duration-500 ease-out relative"
+                      style={{ width: `${loadingPercent}%` }}
+                    >
+                      <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                    </div>
+                  </div>
+                )}
+                {!loadingStage && (
+                  <span className="text-gray-400 text-xs">
+                    動画のダウンロードと分析には30秒〜1分ほどかかります
                   </span>
                 )}
               </div>
-              {/* Progress Bar */}
-              {loadingPercent !== null && loadingPercent !== undefined && (
-                <div className="w-full max-w-xs bg-gray-700 rounded-full h-2 overflow-hidden">
-                  <div
-                    className="bg-emerald-500 h-2 rounded-full transition-all duration-300 ease-out"
-                    style={{ width: `${loadingPercent}%` }}
-                  />
-                </div>
-              )}
-              {!loadingStage && (
-                <span className="text-gray-400 text-xs">
-                  動画のダウンロードと分析には30秒〜1分ほどかかります
-                </span>
-              )}
+              {/* Skeleton preview during initial loading */}
+              <div className="opacity-50">
+                <MessageSkeleton />
+              </div>
             </div>
           )}
 
@@ -724,7 +746,7 @@ export function MessageItem({
             <div className="mt-3">
               <button
                 onClick={onRegenerate}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="flex items-center gap-2 min-h-[44px] px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-all active:scale-95 active:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 aria-label="回答を再生成"
               >
                 <svg

@@ -95,7 +95,7 @@ export function ChatInput({
             <button
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
-              className={`p-3 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-[#40414f] rounded ${
+              className={`min-h-[44px] min-w-[44px] p-3 flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-[#40414f] rounded active:scale-95 ${
                 selectedCreators.length > 0
                   ? "text-emerald-400 hover:text-emerald-300"
                   : "text-gray-400 hover:text-white"
@@ -225,7 +225,7 @@ export function ChatInput({
           <button
             type="submit"
             disabled={!input.trim() || isLoading}
-            className="absolute right-2 bottom-2 p-2 text-gray-400 hover:text-white disabled:text-gray-600 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded"
+            className="absolute right-2 bottom-1.5 min-h-[44px] min-w-[44px] p-2 flex items-center justify-center text-gray-400 hover:text-white disabled:text-gray-600 disabled:cursor-not-allowed disabled:opacity-50 transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded"
             aria-label="送信"
           >
             {isLoading ? (

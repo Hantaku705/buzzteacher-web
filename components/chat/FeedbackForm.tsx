@@ -97,25 +97,25 @@ export function FeedbackForm({
         </span>
 
         {/* Star Rating */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           {[1, 2, 3, 4, 5].map((star) => (
             <button
               key={star}
               onClick={() => handleStarClick(star)}
               onMouseEnter={() => setHoveredRating(star)}
               onMouseLeave={() => setHoveredRating(null)}
-              className="p-0.5 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded"
+              className="min-h-[44px] min-w-[36px] p-2 flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded active:scale-90 hover:scale-110"
               aria-label={`${star}点`}
             >
               <svg
-                className={`w-5 h-5 transition-colors ${
+                className={`w-6 h-6 transition-all ${
                   (
                     hoveredRating !== null
                       ? star <= hoveredRating
                       : star <= (rating || 0)
                   )
-                    ? "text-amber-400 fill-amber-400"
-                    : "text-gray-500"
+                    ? "text-amber-400 fill-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]"
+                    : "text-gray-500 hover:text-gray-400"
                 }`}
                 fill="none"
                 stroke="currentColor"
@@ -144,7 +144,7 @@ export function FeedbackForm({
         <button
           onClick={handleSubmit}
           disabled={isSubmitting || (rating === null && comment.trim() === "")}
-          className="px-3 py-1 text-sm bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-600 disabled:cursor-not-allowed text-white rounded transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="min-h-[44px] px-4 py-2 text-sm bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-600 disabled:cursor-not-allowed disabled:opacity-50 text-white rounded transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-500"
         >
           {isSubmitting ? "送信中..." : "送信"}
         </button>
