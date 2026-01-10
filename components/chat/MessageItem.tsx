@@ -13,6 +13,7 @@ import {
 } from "@/lib/types";
 import { CreatorIcons } from "@/components/shared/CreatorIcons";
 import { AnalysisProgress, type ProgressStep } from "./AnalysisProgress";
+import { VideoAnalysisTable } from "./VideoAnalysisTable";
 
 interface MessageItemProps {
   message: Message;
@@ -642,12 +643,17 @@ export function MessageItem({
                 onRetry={onRetry}
               />
             ) : (
-              <ReactMarkdown
-                components={markdownComponents}
-                remarkPlugins={[remarkGfm]}
-              >
-                {message.content}
-              </ReactMarkdown>
+              <>
+                <ReactMarkdown
+                  components={markdownComponents}
+                  remarkPlugins={[remarkGfm]}
+                >
+                  {message.content}
+                </ReactMarkdown>
+                {message.videoList && message.videoList.length > 0 && (
+                  <VideoAnalysisTable videos={message.videoList} />
+                )}
+              </>
             )
           ) : loadingSteps && loadingSteps.length > 0 ? (
             <AnalysisProgress

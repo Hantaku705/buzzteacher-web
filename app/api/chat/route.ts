@@ -28,7 +28,7 @@ import {
   AVAILABLE_CREATORS,
   CreatorInfo,
 } from "@/lib/knowledge/loader";
-import { VideoAnalysisResult } from "@/lib/types";
+import { VideoAnalysisResult, VideoItem } from "@/lib/types";
 
 // アカウント統計のインターフェース
 interface AccountStats {
@@ -258,7 +258,7 @@ function generateQuantitativeReport(
 // 動画ランキング生成
 interface VideoRankingResult {
   ranking: string; // Top3 + Worst1（Geminiコンテキスト用）
-  videoDetails: string; // 全動画詳細（直接出力用）
+  videoListJson: VideoItem[]; // 全動画詳細（JSON配列、UI用）
 }
 
 function generateVideoRanking(
@@ -330,65 +330,44 @@ ${worstAnalysis?.analysis ? `- **AI分析**: ${worstAnalysis.analysis.slice(0, 2
 
 `;
 
-  // === 全動画詳細（直接出力用） ===
-  let videoDetails = `
-
----
-
-## 📹 全動画詳細分析
-
-以下は分析対象の全${videos.length}件の動画の個別分析です。
-
-`;
-
-  videos.forEach((video, index) => {
+  // === 全動画詳細（JSON配列、UI用） ===
+  const videoListJson: VideoItem[] = videos.map((video) => {
     const analysis = analysisMap.get(video.id);
-    const lvr =
-      video.stats.playCount > 0
-        ? ((video.stats.likeCount / video.stats.playCount) * 100).toFixed(2)
-        : "0.00";
-    const cvr =
-      video.stats.playCount > 0
-        ? ((video.stats.commentCount / video.stats.playCount) * 100).toFixed(3)
-        : "0.000";
+    const playCount = video.stats.playCount || 1;
+    const collectCount = video.stats.collectCount || 0;
 
-    videoDetails += `### 動画${index + 1}: ${video.desc.slice(0, 60) || "(説明なし)"}${video.desc.length > 60 ? "..." : ""}
-
-**URL**: ${video.url}
-
-**統計**:
-| 指標 | 数値 |
-|------|------|
-| 再生数 | ${video.stats.playCount.toLocaleString()} |
-| いいね | ${video.stats.likeCount.toLocaleString()} |
-| コメント | ${video.stats.commentCount.toLocaleString()} |
-| シェア | ${video.stats.shareCount.toLocaleString()} |
-| LVR | ${lvr}% |
-| CVR | ${cvr}% |
-
-`;
-
-    if (analysis?.analysis) {
-      videoDetails += `**AI分析**:
-${analysis.analysis}
-
-`;
-    } else if (analysis?.error) {
-      videoDetails += `**分析エラー**: ${analysis.error}
-
-`;
-    } else {
-      videoDetails += `*分析データなし*
-
-`;
-    }
-
-    videoDetails += `---
-
-`;
+    return {
+      id: video.id,
+      url: video.url,
+      desc: video.desc.slice(0, 100),
+      thumbnail: video.thumbnail || null,
+      createdAt: video.createTime || 0,
+      stats: {
+        playCount: video.stats.playCount,
+        likeCount: video.stats.likeCount,
+        commentCount: video.stats.commentCount,
+        shareCount: video.stats.shareCount,
+        collectCount: collectCount,
+      },
+      metrics: {
+        lvr: (video.stats.likeCount / playCount) * 100,
+        cvr: (video.stats.commentCount / playCount) * 100,
+        svr: (video.stats.shareCount / playCount) * 100,
+        saveRate: (collectCount / playCount) * 100,
+        er:
+          ((video.stats.likeCount +
+            video.stats.commentCount +
+            video.stats.shareCount +
+            collectCount) /
+            playCount) *
+          100,
+      },
+      analysis: analysis?.analysis || null,
+      error: analysis?.error,
+    };
   });
 
-  return { ranking, videoDetails };
+  return { ranking, videoListJson };
 }
 
 // 定性分析プロンプト生成
@@ -752,7 +731,7 @@ export async function POST(req: NextRequest) {
 
             // Analyze video with progress updates
             let analysisContext = "";
-            let videoDetailsOutput = ""; // プロフィール分析時の全動画詳細
+            let videoListJson: VideoItem[] | undefined; // プロフィール分析時の動画一覧
             if (videoUrl && platform) {
               const analysisResult = await analyzeVideoWithProgress(
                 videoUrl,
@@ -768,7 +747,7 @@ export async function POST(req: NextRequest) {
                   ),
               );
               analysisContext = analysisResult.context;
-              videoDetailsOutput = analysisResult.videoDetails || "";
+              videoListJson = analysisResult.videoListJson;
             }
 
             sendProgress(controller, "アドバイスを生成中...");
@@ -798,12 +777,13 @@ export async function POST(req: NextRequest) {
               }
             }
 
-            // プロフィール分析時：全動画詳細を直接出力（Geminiのトークン制限を回避）
-            if (videoDetailsOutput) {
-              const detailsData = JSON.stringify({
-                choices: [{ delta: { content: videoDetailsOutput } }],
+            // プロフィール分析時：動画一覧をJSON形式で送信（カスタムUIで表示）
+            if (videoListJson && videoListJson.length > 0) {
+              const videoListData = JSON.stringify({
+                type: "video_list",
+                videos: videoListJson,
               });
-              controller.enqueue(encoder.encode(`data: ${detailsData}\n\n`));
+              controller.enqueue(encoder.encode(`data: ${videoListData}\n\n`));
             }
 
             controller.enqueue(encoder.encode("data: [DONE]\n\n"));
@@ -834,7 +814,7 @@ export async function POST(req: NextRequest) {
 
           // Analyze video with progress updates (only once for all creators)
           let analysisContext = "";
-          let videoDetailsOutput = ""; // プロフィール分析時の全動画詳細
+          let videoListJson: VideoItem[] | undefined; // プロフィール分析時の動画一覧
           if (videoUrl && platform) {
             const analysisResult = await analyzeVideoWithProgress(
               videoUrl,
@@ -843,7 +823,7 @@ export async function POST(req: NextRequest) {
                 sendProgress(controller, stage, percent, current, total, steps),
             );
             analysisContext = analysisResult.context;
-            videoDetailsOutput = analysisResult.videoDetails || "";
+            videoListJson = analysisResult.videoListJson;
           }
 
           for (const creatorId of creatorsToAnalyze) {
@@ -919,12 +899,13 @@ export async function POST(req: NextRequest) {
             );
           }
 
-          // プロフィール分析時：全動画詳細を直接出力（Geminiのトークン制限を回避）
-          if (videoDetailsOutput) {
-            const detailsData = JSON.stringify({
-              choices: [{ delta: { content: videoDetailsOutput } }],
+          // プロフィール分析時：動画一覧をJSON形式で送信（カスタムUIで表示）
+          if (videoListJson && videoListJson.length > 0) {
+            const videoListData = JSON.stringify({
+              type: "video_list",
+              videos: videoListJson,
             });
-            controller.enqueue(encoder.encode(`data: ${detailsData}\n\n`));
+            controller.enqueue(encoder.encode(`data: ${videoListData}\n\n`));
           }
 
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
@@ -960,7 +941,7 @@ export async function POST(req: NextRequest) {
 // analyzeVideoWithProgress の戻り値型
 interface AnalysisResult {
   context: string; // Gemini用コンテキスト
-  videoDetails?: string; // プロフィール分析時のみ：全動画詳細（直接出力用）
+  videoListJson?: VideoItem[]; // プロフィール分析時のみ：動画一覧（JSON配列、UI用）
 }
 
 async function analyzeVideoWithProgress(
@@ -1274,7 +1255,7 @@ interface ProgressStepType {
 
 interface ProfileAnalysisResult {
   context: string; // Gemini用コンテキスト（サマリー + AI指示）
-  videoDetails: string; // 直接出力する動画詳細（15件すべて）
+  videoListJson: VideoItem[]; // 動画一覧（JSON配列、UI用）
 }
 
 async function analyzeTikTokProfile(
@@ -1288,7 +1269,7 @@ async function analyzeTikTokProfile(
   ) => void,
 ): Promise<ProfileAnalysisResult> {
   let context = "";
-  let videoDetails = "";
+  let videoListJson: VideoItem[] = [];
   const errors: string[] = [];
 
   // ステップ管理
@@ -1348,13 +1329,13 @@ async function analyzeTikTokProfile(
       // 4. 定性分析プロンプト生成
       context += generateQualitativePrompt(analysisResults);
 
-      // 5. 動画ランキング生成（Top3 + Worst1をコンテキストに、全動画詳細は直接出力用）
-      const { ranking, videoDetails: allVideoDetails } = generateVideoRanking(
+      // 5. 動画ランキング生成（Top3 + Worst1をコンテキストに、全動画詳細はJSON配列）
+      const { ranking, videoListJson: videoList } = generateVideoRanking(
         userVideos.videos,
         analysisResults,
       );
       context += ranking;
-      videoDetails = allVideoDetails;
+      videoListJson = videoList;
 
       // 6. AI向け指示を追加
       updateStep("analyze", "completed", `${userVideos.videos.length}件完了`);
@@ -1410,7 +1391,7 @@ async function analyzeTikTokProfile(
     context += `\n※ URLのみでアドバイスを行います。\n`;
   }
 
-  return { context, videoDetails };
+  return { context, videoListJson };
 }
 
 async function analyzeVideosInBatches(

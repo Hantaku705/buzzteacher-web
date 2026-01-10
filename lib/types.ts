@@ -31,6 +31,7 @@ export interface Message {
   discussion?: DiscussionTurn[]; // 議論スレッド
   discussionFinal?: DiscussionFinal; // 最終統合案
   canStartDiscussion?: boolean; // 議論開始可能フラグ
+  videoList?: VideoItem[]; // アカウント分析時の動画一覧
 }
 
 export interface Conversation {
@@ -79,6 +80,31 @@ export interface VideoAnalysisResult {
     likeCount: number;
     commentCount: number;
     shareCount: number;
+  };
+  analysis: string | null;
+  error?: string;
+}
+
+// アカウント分析用：動画アイテム
+export interface VideoItem {
+  id: string;
+  url: string;
+  desc: string;
+  thumbnail: string | null;
+  createdAt: number;
+  stats: {
+    playCount: number;
+    likeCount: number;
+    commentCount: number;
+    shareCount: number;
+    collectCount: number;
+  };
+  metrics: {
+    lvr: number;
+    cvr: number;
+    svr: number;
+    saveRate: number;
+    er: number;
   };
   analysis: string | null;
   error?: string;

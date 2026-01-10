@@ -326,6 +326,15 @@ export default function Home() {
                     ),
                   );
                 }
+              } else if (json.type === "video_list") {
+                // プロフィール分析時：動画一覧をセット
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === assistantMessageId
+                      ? { ...m, videoList: json.videos }
+                      : m,
+                  ),
+                );
               } else {
                 const chunk = json.choices?.[0]?.delta?.content || "";
                 if (chunk) {
