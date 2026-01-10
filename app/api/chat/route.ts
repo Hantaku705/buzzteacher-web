@@ -879,9 +879,71 @@ async function analyzeVideoWithProgress(
   let context = `\n\n## 分析対象動画\n- URL: ${url}\n- プラットフォーム: ${platform}\n`;
   const errors: string[] = [];
 
+  // プラットフォーム別のステップを定義
+  const getStepsForPlatform = (
+    plat: string,
+  ): {
+    steps: ProgressStepType[];
+    hasInsight: boolean;
+    hasDownload: boolean;
+  } => {
+    if (plat === "TikTok" || plat === "Instagram") {
+      return {
+        steps: [
+          { id: "insight", label: "インサイト取得", status: "pending" },
+          { id: "download", label: "動画ダウンロード", status: "pending" },
+          { id: "analyze", label: "AI分析", status: "pending" },
+          { id: "advice", label: "アドバイス生成", status: "pending" },
+        ],
+        hasInsight: true,
+        hasDownload: true,
+      };
+    } else if (plat === "YouTube") {
+      return {
+        steps: [
+          { id: "analyze", label: "動画分析", status: "pending" },
+          { id: "advice", label: "アドバイス生成", status: "pending" },
+        ],
+        hasInsight: false,
+        hasDownload: false,
+      };
+    } else {
+      return {
+        steps: [
+          { id: "recognize", label: "URL認識", status: "pending" },
+          { id: "advice", label: "アドバイス生成", status: "pending" },
+        ],
+        hasInsight: false,
+        hasDownload: false,
+      };
+    }
+  };
+
+  const { steps, hasInsight, hasDownload } = getStepsForPlatform(platform);
+
+  const updateStep = (
+    id: string,
+    status: ProgressStepType["status"],
+    detail?: string,
+  ) => {
+    const step = steps.find((s) => s.id === id);
+    if (step) {
+      step.status = status;
+      if (detail !== undefined) step.detail = detail;
+    }
+  };
+
   try {
     if (platform === "TikTok") {
-      onProgress("TikTokインサイトを取得中...");
+      // Step 1: インサイト取得
+      updateStep("insight", "in_progress");
+      onProgress(
+        "TikTokインサイトを取得中...",
+        10,
+        undefined,
+        undefined,
+        steps,
+      );
       const insight = await getTikTokInsight(url);
       if (insight) {
         context += `\n### インサイト\n`;
@@ -891,35 +953,66 @@ async function analyzeVideoWithProgress(
         context += `- シェア: ${insight.share?.toLocaleString() || "取得できず"}\n`;
         context += `- 保存: ${insight.save?.toLocaleString() || "取得できず"}\n`;
         context += `- 動画時間: ${insight.durationSec || "不明"}秒\n`;
+        updateStep("insight", "completed");
       } else {
+        updateStep("insight", "error");
         errors.push(
           "TikTokインサイトの取得に失敗しました（APIキー未設定または動画が非公開）",
         );
       }
 
-      onProgress("動画をダウンロード中...");
+      // Step 2: ダウンロード
+      updateStep("download", "in_progress");
+      onProgress("動画をダウンロード中...", 30, undefined, undefined, steps);
       const videoBuffer = await downloadTikTokVideo(url);
       if (videoBuffer) {
-        onProgress("動画を分析中...");
+        updateStep("download", "completed");
+
+        // Step 3: AI分析
+        updateStep("analyze", "in_progress");
+        onProgress("動画を分析中...", 50, undefined, undefined, steps);
         const analysis = await analyzeVideoWithGemini(videoBuffer);
         if (analysis) {
           context += `\n### Gemini動画分析結果\n${analysis}\n`;
+          updateStep("analyze", "completed");
         } else {
+          updateStep("analyze", "error");
           errors.push("動画の内容分析に失敗しました（Gemini APIエラー）");
         }
       } else {
+        updateStep("download", "error");
         errors.push("動画のダウンロードに失敗しました");
       }
+
+      // Step 4: アドバイス生成
+      updateStep("advice", "in_progress");
+      onProgress("アドバイスを生成中...", 80, undefined, undefined, steps);
     } else if (platform === "YouTube") {
-      onProgress("YouTube動画を分析中...");
+      // Step 1: 動画分析
+      updateStep("analyze", "in_progress");
+      onProgress("YouTube動画を分析中...", 30, undefined, undefined, steps);
       const analysis = await analyzeYouTubeWithGemini(url);
       if (analysis) {
         context += `\n### Gemini動画分析結果\n${analysis}\n`;
+        updateStep("analyze", "completed");
       } else {
+        updateStep("analyze", "error");
         errors.push("YouTube動画の分析に失敗しました（Gemini APIエラー）");
       }
+
+      // Step 2: アドバイス生成
+      updateStep("advice", "in_progress");
+      onProgress("アドバイスを生成中...", 70, undefined, undefined, steps);
     } else if (platform === "Instagram") {
-      onProgress("Instagramインサイトを取得中...");
+      // Step 1: インサイト取得
+      updateStep("insight", "in_progress");
+      onProgress(
+        "Instagramインサイトを取得中...",
+        10,
+        undefined,
+        undefined,
+        steps,
+      );
       const insight = await getInstagramInsight(url);
       if (insight) {
         context += `\n### インサイト\n`;
@@ -928,28 +1021,62 @@ async function analyzeVideoWithProgress(
         context += `- コメント: ${insight.comment?.toLocaleString() || "取得できず"}\n`;
         context += `- シェア: ${insight.share?.toLocaleString() || "取得できず"}\n`;
         context += `- 動画時間: ${insight.durationSec || "不明"}秒\n`;
+        updateStep("insight", "completed");
       } else {
+        updateStep("insight", "error");
         errors.push(
           "Instagramインサイトの取得に失敗しました（APIキー未設定または動画が非公開）",
         );
       }
 
-      onProgress("Instagram動画をダウンロード中...");
+      // Step 2: ダウンロード
+      updateStep("download", "in_progress");
+      onProgress(
+        "Instagram動画をダウンロード中...",
+        30,
+        undefined,
+        undefined,
+        steps,
+      );
       const videoBuffer = await downloadInstagramVideo(url);
       if (videoBuffer) {
-        onProgress("動画を分析中...");
+        updateStep("download", "completed");
+
+        // Step 3: AI分析
+        updateStep("analyze", "in_progress");
+        onProgress("動画を分析中...", 50, undefined, undefined, steps);
         const analysis = await analyzeVideoWithGemini(videoBuffer);
         if (analysis) {
           context += `\n### Gemini動画分析結果\n${analysis}\n`;
+          updateStep("analyze", "completed");
         } else {
+          updateStep("analyze", "error");
           errors.push("動画の内容分析に失敗しました（Gemini APIエラー）");
         }
       } else {
+        updateStep("download", "error");
         errors.push("Instagram動画のダウンロードに失敗しました");
       }
+
+      // Step 4: アドバイス生成
+      updateStep("advice", "in_progress");
+      onProgress("アドバイスを生成中...", 80, undefined, undefined, steps);
     } else if (platform === "X") {
-      onProgress(`${platform}のURLを認識しました`);
+      // Step 1: URL認識
+      updateStep("recognize", "in_progress");
+      onProgress(
+        `${platform}のURLを認識しました`,
+        50,
+        undefined,
+        undefined,
+        steps,
+      );
+      updateStep("recognize", "completed");
       errors.push(`${platform}は現在動画分析に対応していません（URLのみ認識）`);
+
+      // Step 2: アドバイス生成
+      updateStep("advice", "in_progress");
+      onProgress("アドバイスを生成中...", 70, undefined, undefined, steps);
     }
   } catch (error) {
     console.error("Video analysis error:", error);
