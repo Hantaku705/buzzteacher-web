@@ -621,7 +621,7 @@ export function MessageItem({
                   {showEditButton && (
                     <button
                       onClick={handleEdit}
-                      className="absolute -right-8 top-0 p-1 text-gray-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded"
+                      className="absolute -right-8 top-0 p-1 text-gray-500 hover:text-white opacity-40 group-hover:opacity-100 transition-opacity duration-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded"
                       aria-label="メッセージを編集"
                     >
                       <svg

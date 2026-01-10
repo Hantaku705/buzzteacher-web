@@ -92,7 +92,7 @@ export function ConversationList({
                   e.stopPropagation();
                   setMenuOpenId(menuOpenId === conv.id ? null : conv.id);
                 }}
-                className="opacity-0 group-hover:opacity-100 min-h-[36px] min-w-[36px] p-2 flex items-center justify-center hover:bg-[#40414f] rounded transition-all active:scale-95 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="opacity-40 group-hover:opacity-100 min-h-[36px] min-w-[36px] p-2 flex items-center justify-center hover:bg-[#40414f] rounded transition-all duration-200 active:scale-95 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 aria-label="メニューを開く"
               >
                 <svg

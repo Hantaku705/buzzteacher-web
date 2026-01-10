@@ -168,7 +168,7 @@ export function Sidebar({
         <div className="px-2 pb-2">
           <Link
             href="/creators"
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-[#2a2b32] transition-colors text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all duration-150 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

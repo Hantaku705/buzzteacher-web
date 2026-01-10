@@ -104,11 +104,11 @@ export function FeedbackForm({
               onClick={() => handleStarClick(star)}
               onMouseEnter={() => setHoveredRating(star)}
               onMouseLeave={() => setHoveredRating(null)}
-              className="min-h-[44px] min-w-[36px] p-2 flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded active:scale-90 hover:scale-110"
+              className="min-h-[44px] min-w-[36px] p-2 flex items-center justify-center transition-all duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-emerald-500 rounded active:scale-90 hover:scale-110"
               aria-label={`${star}点`}
             >
               <svg
-                className={`w-6 h-6 transition-all ${
+                className={`w-6 h-6 transition-all duration-150 ease-out ${
                   (
                     hoveredRating !== null
                       ? star <= hoveredRating

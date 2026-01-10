@@ -95,10 +95,10 @@ export function ChatInput({
             <button
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
-              className={`min-h-[44px] min-w-[44px] p-3 flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-[#40414f] rounded active:scale-95 ${
+              className={`min-h-[44px] min-w-[44px] p-3 flex items-center justify-center transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-[#40414f] rounded active:scale-95 ${
                 selectedCreators.length > 0
-                  ? "text-emerald-400 hover:text-emerald-300"
-                  : "text-gray-400 hover:text-white"
+                  ? "text-emerald-400 hover:text-emerald-200 hover:bg-emerald-500/10"
+                  : "text-gray-400 hover:text-white hover:bg-white/10"
               }`}
               title={
                 selectedCreators.length > 0
