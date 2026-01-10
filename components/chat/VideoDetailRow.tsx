@@ -137,11 +137,56 @@ export function VideoDetailRow({
               {/* AI分析 */}
               {video.analysis ? (
                 <div>
-                  <h4 className="text-emerald-400 font-medium mb-2 text-sm">
+                  <h4 className="text-emerald-400 font-medium mb-3 text-sm flex items-center gap-2">
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                      />
+                    </svg>
                     AI分析
                   </h4>
-                  <div className="text-white text-sm leading-relaxed bg-gray-700/30 rounded-lg p-4 prose prose-invert prose-sm max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  <div className="text-white text-sm leading-relaxed space-y-3">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        h3: ({ children }) => (
+                          <h3 className="text-emerald-400 font-bold text-base mt-4 mb-2 pb-1 border-b border-emerald-400/30">
+                            {children}
+                          </h3>
+                        ),
+                        h4: ({ children }) => (
+                          <h4 className="text-yellow-400 font-semibold text-sm mt-3 mb-1">
+                            {children}
+                          </h4>
+                        ),
+                        p: ({ children }) => (
+                          <p className="text-gray-200 leading-relaxed mb-2 pl-2 border-l-2 border-gray-600">
+                            {children}
+                          </p>
+                        ),
+                        strong: ({ children }) => (
+                          <strong className="text-emerald-300 font-semibold">
+                            {children}
+                          </strong>
+                        ),
+                        ul: ({ children }) => (
+                          <ul className="list-disc list-outside pl-5 space-y-1 text-gray-300">
+                            {children}
+                          </ul>
+                        ),
+                        li: ({ children }) => (
+                          <li className="text-gray-300">{children}</li>
+                        ),
+                      }}
+                    >
                       {video.analysis}
                     </ReactMarkdown>
                   </div>
