@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import {
@@ -155,6 +156,30 @@ const markdownComponents = {
   ),
   pre: CodeBlock,
   hr: () => <hr className="border-gray-600 my-4" />,
+  table: ({ children }: { children?: React.ReactNode }) => (
+    <div className="overflow-x-auto my-4">
+      <table className="min-w-full border-collapse border border-gray-600 text-sm">
+        {children}
+      </table>
+    </div>
+  ),
+  thead: ({ children }: { children?: React.ReactNode }) => (
+    <thead className="bg-gray-700">{children}</thead>
+  ),
+  tbody: ({ children }: { children?: React.ReactNode }) => (
+    <tbody className="divide-y divide-gray-600">{children}</tbody>
+  ),
+  tr: ({ children }: { children?: React.ReactNode }) => (
+    <tr className="hover:bg-gray-700/50">{children}</tr>
+  ),
+  th: ({ children }: { children?: React.ReactNode }) => (
+    <th className="px-3 py-2 text-left font-semibold text-emerald-400 border border-gray-600">
+      {children}
+    </th>
+  ),
+  td: ({ children }: { children?: React.ReactNode }) => (
+    <td className="px-3 py-2 border border-gray-600">{children}</td>
+  ),
 };
 
 function CreatorSectionView({
@@ -182,7 +207,10 @@ function CreatorSectionView({
       </div>
       <div className="text-white leading-relaxed">
         {section.content ? (
-          <ReactMarkdown components={markdownComponents}>
+          <ReactMarkdown
+            components={markdownComponents}
+            remarkPlugins={[remarkGfm]}
+          >
             {section.content}
           </ReactMarkdown>
         ) : (
@@ -235,7 +263,10 @@ function DiscussionTurnView({
       </div>
       <div className="text-white leading-relaxed">
         {turn.content ? (
-          <ReactMarkdown components={markdownComponents}>
+          <ReactMarkdown
+            components={markdownComponents}
+            remarkPlugins={[remarkGfm]}
+          >
             {turn.content}
           </ReactMarkdown>
         ) : (
@@ -290,7 +321,10 @@ function DiscussionFinalView({
       </div>
       <div className="text-white leading-relaxed">
         {discussionFinal.content ? (
-          <ReactMarkdown components={markdownComponents}>
+          <ReactMarkdown
+            components={markdownComponents}
+            remarkPlugins={[remarkGfm]}
+          >
             {discussionFinal.content}
           </ReactMarkdown>
         ) : (
@@ -608,7 +642,10 @@ export function MessageItem({
                 onRetry={onRetry}
               />
             ) : (
-              <ReactMarkdown components={markdownComponents}>
+              <ReactMarkdown
+                components={markdownComponents}
+                remarkPlugins={[remarkGfm]}
+              >
                 {message.content}
               </ReactMarkdown>
             )
