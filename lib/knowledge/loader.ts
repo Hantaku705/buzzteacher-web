@@ -102,6 +102,17 @@ export const AVAILABLE_CREATORS: CreatorInfo[] = [
     works: ['縦型ショートドラマ', '1-3分完結ストーリー'],
     career: ['5人のクリエイター集団', '監督・脚本・俳優'],
   },
+  {
+    id: 'brendankane',
+    name: 'Brendan Kane',
+    description: 'Hook Point - 3秒で注目を集める科学',
+    dataCount: 0,
+    accounts: { twitter: 'BrendanKane', instagram: 'brendankane' },
+    followers: '60B+ Views Generated',
+    achievements: ['60B+ビュー生成', '100M+フォロワー獲得', '$1B+クライアント収益'],
+    works: ['One Million Followers', 'Hook Point', 'The Guide to Going Viral'],
+    career: ['Hook Point創設者', 'Taylor Swift/Rihanaデジタル戦略', 'MTV/IKEA/Skechersコンサル'],
+  },
 ]
 
 // CreatorIdからCreatorInfoを取得
@@ -163,6 +174,15 @@ const CREATOR_SUMMARIES: Record<string, string> = {
 - **5人のクリエイター集団**: 監督・脚本・俳優の複合チーム
 - **感情を動かす**: 驚き・共感・笑い・感動の仕掛け
 - **180万フォロワー**: TikTok上半期トレンド大賞2024`,
+
+  brendankane: `## Brendan Kane（Hook Point）の核心
+- **3秒ルール**: 人は3秒以内にコンテンツを見るか決める
+- **パターンインタラプト**: 予想を裏切ることで注意を引く（例: 「瞑想は詐欺」）
+- **Hook + Story + Authenticity**: 3本柱のバランスが成功の鍵
+- **仮説→テスト→ピボット**: 科学的アプローチで再現可能なバイラルを生む
+- **80/20ルール**: 80%は価値提供、20%はCTA
+- **220+バイラルフォーマット**: 実証済みの型から選択
+- **Process Communication Model**: 視聴者を6タイプに分類（Thinkers/Persisters/Harmonizers/Imaginers/Rebels/Promoters）`,
 }
 
 // 特定creatorのサマリーを取得

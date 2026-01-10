@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
-import { Message, CreatorSection } from '@/lib/types'
+import { Message, CreatorSection, DiscussionTurn } from '@/lib/types'
 import { CreatorIcons } from '@/components/shared/CreatorIcons'
 import { AnalysisProgress, type ProgressStep } from './AnalysisProgress'
 
@@ -135,6 +135,63 @@ function CreatorSectionView({ section, isFirst }: { section: CreatorSection; isF
   )
 }
 
+function DiscussionTurnView({ turn, isFirst }: { turn: DiscussionTurn; isFirst: boolean }) {
+  return (
+    <div className={`${turn.replyTo && !isFirst ? 'ml-6 border-l-2 border-emerald-400/30 pl-4' : ''}`}>
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-6 h-6 rounded-full bg-amber-600 flex items-center justify-center text-white text-xs font-medium">
+          {turn.creatorName.charAt(0)}
+        </div>
+        <span className="font-medium text-amber-400">{turn.creatorName}</span>
+        {turn.replyTo && (
+          <span className="text-xs text-gray-400">→ 返信</span>
+        )}
+        {turn.isStreaming && (
+          <div className="flex items-center gap-1 ml-2">
+            <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse"></span>
+            <span className="text-amber-400 text-xs">発言中</span>
+          </div>
+        )}
+      </div>
+      <div className="text-white leading-relaxed">
+        {turn.content ? (
+          <ReactMarkdown components={markdownComponents}>
+            {turn.content}
+          </ReactMarkdown>
+        ) : (
+          <div className="flex items-center gap-1 text-gray-400">
+            <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+            <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+            <span className="w-1.5 h-1.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function DiscussionThread({ discussion }: { discussion: DiscussionTurn[] }) {
+  return (
+    <div className="mt-6 pt-6 border-t border-amber-500/30">
+      <div className="flex items-center gap-2 mb-4">
+        <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+        </svg>
+        <h3 className="text-lg font-bold text-amber-400">審査員ディスカッション</h3>
+      </div>
+      <div className="space-y-4">
+        {discussion.map((turn, index) => (
+          <DiscussionTurnView
+            key={`${turn.creatorId}-${index}`}
+            turn={turn}
+            isFirst={index === 0}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function ErrorMessage({ content, onRetry }: { content: string; onRetry?: () => void }) {
   return (
     <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-4">
@@ -164,6 +221,7 @@ interface MessageItemFullProps extends MessageItemProps {
   onRetry?: () => void
   onRegenerate?: () => void
   onEdit?: (messageId: string, newContent: string) => void
+  onStartDiscussion?: (messageId: string) => void
   isLast?: boolean
   isLoading?: boolean
   loadingStage?: string | null
@@ -171,7 +229,7 @@ interface MessageItemFullProps extends MessageItemProps {
   loadingSteps?: ProgressStep[] | null
 }
 
-export function MessageItem({ message, onRetry, onRegenerate, onEdit, isLast, isLoading, loadingStage, loadingPercent, loadingSteps }: MessageItemFullProps) {
+export function MessageItem({ message, onRetry, onRegenerate, onEdit, onStartDiscussion, isLast, isLoading, loadingStage, loadingPercent, loadingSteps }: MessageItemFullProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(message.content)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -181,6 +239,8 @@ export function MessageItem({ message, onRetry, onRegenerate, onEdit, isLast, is
   const isError = message.content?.startsWith('エラー:')
   const showRegenerate = !isUser && isLast && !isLoading && message.content && !isError
   const showEditButton = isUser && !isLoading
+  const showDiscussionButton = hasMultipleSections && message.canStartDiscussion && !message.discussion && !isLoading
+  const hasDiscussion = message.discussion && message.discussion.length > 0
 
   // Auto-resize textarea
   useEffect(() => {
@@ -248,6 +308,26 @@ export function MessageItem({ message, onRetry, onRegenerate, onEdit, isLast, is
                   isFirst={index === 0}
                 />
               ))}
+
+              {/* Discussion button */}
+              {showDiscussionButton && onStartDiscussion && (
+                <div className="mt-6 pt-6 border-t border-gray-600">
+                  <button
+                    onClick={() => onStartDiscussion(message.id)}
+                    className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                    </svg>
+                    審査員同士で議論する
+                  </button>
+                </div>
+              )}
+
+              {/* Discussion thread */}
+              {hasDiscussion && (
+                <DiscussionThread discussion={message.discussion!} />
+              )}
             </div>
           ) : message.content ? (
             isUser ? (

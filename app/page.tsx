@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { ChatInput } from '@/components/chat/ChatInput'
 import { MessageList } from '@/components/chat/MessageList'
 import { Sidebar } from '@/components/layout/Sidebar'
-import { Message, Conversation, User, CreatorSection } from '@/lib/types'
+import { Message, Conversation, User, CreatorSection, DiscussionTurn } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 import type { ProgressStep } from '@/components/chat/AnalysisProgress'
 
@@ -326,6 +326,17 @@ export default function Home() {
         }
       }
 
+      // Mark as discussion-ready if multiple creators
+      if (sections.length > 1) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMessageId
+              ? { ...m, canStartDiscussion: true }
+              : m
+          )
+        )
+      }
+
       // Save assistant message (only for authenticated users)
       if (user && convId && fullContent) {
         await saveMessage(convId, 'assistant', fullContent, selectedCreators)
@@ -372,6 +383,141 @@ export default function Home() {
 
     // Send the edited content as a new message
     handleSendMessage(newContent)
+  }, [messages])
+
+  const handleStartDiscussion = useCallback(async (messageId: string) => {
+    // Find the message with creator sections
+    const message = messages.find(m => m.id === messageId)
+    if (!message || !message.creatorSections || message.creatorSections.length < 2) {
+      console.error('Cannot start discussion: need at least 2 creator analyses')
+      return
+    }
+
+    // Mark the message as having an ongoing discussion
+    setMessages(prev => prev.map(m =>
+      m.id === messageId
+        ? { ...m, discussion: [], canStartDiscussion: false }
+        : m
+    ))
+
+    setIsLoading(true)
+
+    try {
+      // Prepare previous analyses for the API
+      const previousAnalyses = message.creatorSections.map(section => ({
+        creatorId: section.creatorId,
+        creatorName: section.creatorName,
+        content: section.content,
+      }))
+
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: 'discussion' }],
+          discussionMode: true,
+          previousAnalyses,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`APIエラー: ${response.status}`)
+      }
+
+      const reader = response.body?.getReader()
+      if (!reader) throw new Error('No reader')
+
+      const decoder = new TextDecoder()
+      let buffer = ''
+      const discussionTurns: DiscussionTurn[] = []
+      let currentTurn: DiscussionTurn | null = null
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6)
+            if (data === '[DONE]') continue
+
+            try {
+              const json = JSON.parse(data)
+
+              if (json.type === 'discussion_start') {
+                // 議論開始
+                setLoadingStage('審査員ディスカッション中...')
+              } else if (json.type === 'discussion_turn') {
+                // 新しい発言開始
+                currentTurn = {
+                  creatorId: json.creatorId,
+                  creatorName: json.creatorName,
+                  content: '',
+                  replyTo: json.replyTo || undefined,
+                  isStreaming: true,
+                }
+                discussionTurns.push(currentTurn)
+                setMessages(prev => prev.map(m =>
+                  m.id === messageId
+                    ? { ...m, discussion: [...discussionTurns] }
+                    : m
+                ))
+              } else if (json.type === 'discussion_turn_end') {
+                // 発言終了
+                if (currentTurn) {
+                  currentTurn.isStreaming = false
+                  setMessages(prev => prev.map(m =>
+                    m.id === messageId
+                      ? { ...m, discussion: [...discussionTurns] }
+                      : m
+                  ))
+                }
+              } else if (json.type === 'discussion_end') {
+                // 議論終了
+                setLoadingStage(null)
+              } else {
+                // 通常のテキストチャンク
+                const chunk = json.choices?.[0]?.delta?.content || ''
+                if (chunk && currentTurn) {
+                  currentTurn.content += chunk
+                  setMessages(prev => prev.map(m =>
+                    m.id === messageId
+                      ? { ...m, discussion: [...discussionTurns] }
+                      : m
+                  ))
+                }
+              }
+            } catch {
+              // JSONパースエラー時はテキストとして扱う
+              if (currentTurn) {
+                currentTurn.content += data
+                setMessages(prev => prev.map(m =>
+                  m.id === messageId
+                    ? { ...m, discussion: [...discussionTurns] }
+                    : m
+                ))
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Discussion error:', error)
+      // エラー時は議論開始可能に戻す
+      setMessages(prev => prev.map(m =>
+        m.id === messageId
+          ? { ...m, discussion: undefined, canStartDiscussion: true }
+          : m
+      ))
+    } finally {
+      setIsLoading(false)
+      setLoadingStage(null)
+    }
   }, [messages])
 
   if (isInitializing) {
@@ -501,6 +647,7 @@ export default function Home() {
               messages={messages}
               onRegenerate={handleRegenerate}
               onEdit={handleEditMessage}
+              onStartDiscussion={handleStartDiscussion}
               isLoading={isLoading}
               loadingStage={loadingStage}
               loadingPercent={loadingPercent}

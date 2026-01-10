@@ -5,6 +5,15 @@ export interface CreatorSection {
   isStreaming?: boolean
 }
 
+// 議論の発言
+export interface DiscussionTurn {
+  creatorId: string
+  creatorName: string
+  content: string
+  replyTo?: string  // 返信先のcreatorId
+  isStreaming?: boolean
+}
+
 export interface Message {
   id: string
   conversation_id?: string
@@ -13,6 +22,8 @@ export interface Message {
   creators?: string[]
   createdAt: Date
   creatorSections?: CreatorSection[]
+  discussion?: DiscussionTurn[]        // 議論スレッド
+  canStartDiscussion?: boolean         // 議論開始可能フラグ
 }
 
 export interface Conversation {

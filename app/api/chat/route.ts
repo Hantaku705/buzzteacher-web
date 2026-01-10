@@ -338,9 +338,150 @@ ${result.analysis ? `**Gemini分析:**\n${result.analysis}\n` : `**分析エラ�
   return report
 }
 
+// 議論生成用の型
+interface CreatorAnalysis {
+  creatorId: string
+  creatorName: string
+  content: string
+}
+
+interface DiscussionTurn {
+  creatorId: string
+  creatorName: string
+  content: string
+  replyTo: string | null
+}
+
+// 議論モードのハンドラー
+async function handleDiscussionMode(
+  model: ReturnType<GoogleGenerativeAI['getGenerativeModel']>,
+  previousAnalyses: CreatorAnalysis[],
+  encoder: TextEncoder
+): Promise<Response> {
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        // 議論開始マーカーを送信
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+          type: 'discussion_start'
+        })}\n\n`))
+
+        // 議論プロンプトを構築
+        const analysesText = previousAnalyses.map(a =>
+          `### ${a.creatorName}の見解\n${a.content}`
+        ).join('\n\n')
+
+        const discussionPrompt = `あなたはBuzzTeacherの議論コーディネーターです。
+以下の審査員たちの見解を踏まえて、彼らが実際に会話しているようにディスカッションをシミュレートしてください。
+
+## 各審査員の分析結果
+${analysesText}
+
+## 議論ルール
+1. 各審査員の特徴的な視点を維持する（それぞれのメソッド・理論に基づく）
+2. 相互参照を含める（「〇〇さんの言う通り」「〇〇さんに追加すると」など）
+3. 建設的な議論にする（否定だけでなく発展させる）
+4. 実践的な結論に導く
+5. 各発言は100-200文字程度で簡潔に
+
+## 出力フォーマット
+以下のJSON配列形式で出力してください。各オブジェクトは1人の発言です。
+replyToは返信先のcreatorId（最初の発言者はnull）。
+3-5人分の発言を生成してください。
+
+\`\`\`json
+[
+  {"creatorId": "${previousAnalyses[0]?.creatorId || 'creator1'}", "creatorName": "${previousAnalyses[0]?.creatorName || 'Creator1'}", "content": "発言内容...", "replyTo": null},
+  {"creatorId": "${previousAnalyses[1]?.creatorId || 'creator2'}", "creatorName": "${previousAnalyses[1]?.creatorName || 'Creator2'}", "content": "〇〇さんの言う通りですね。加えて...", "replyTo": "${previousAnalyses[0]?.creatorId || 'creator1'}"},
+  ...
+]
+\`\`\`
+
+JSONのみを出力してください。説明は不要です。`
+
+        // Geminiに議論を生成させる
+        const result = await model.generateContent(discussionPrompt)
+        const responseText = result.response.text()
+
+        // JSONをパース
+        let discussionTurns: DiscussionTurn[] = []
+        try {
+          // ```json と ``` を除去
+          const jsonMatch = responseText.match(/\[[\s\S]*\]/)
+          if (jsonMatch) {
+            discussionTurns = JSON.parse(jsonMatch[0])
+          }
+        } catch (parseError) {
+          console.error('Discussion JSON parse error:', parseError)
+          // パースに失敗した場合はテキストをそのまま1つの発言として扱う
+          discussionTurns = [{
+            creatorId: previousAnalyses[0]?.creatorId || 'unknown',
+            creatorName: previousAnalyses[0]?.creatorName || '審査員',
+            content: responseText,
+            replyTo: null
+          }]
+        }
+
+        // 各発言をストリーミング
+        for (const turn of discussionTurns) {
+          // 発言開始マーカー
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            type: 'discussion_turn',
+            creatorId: turn.creatorId,
+            creatorName: turn.creatorName,
+            replyTo: turn.replyTo
+          })}\n\n`))
+
+          // 発言内容を文字ごとにストリーミング（自然な表示のため）
+          const content = turn.content
+          const chunkSize = 10 // 10文字ずつ送信
+          for (let i = 0; i < content.length; i += chunkSize) {
+            const chunk = content.slice(i, i + chunkSize)
+            const data = JSON.stringify({
+              choices: [{ delta: { content: chunk } }]
+            })
+            controller.enqueue(encoder.encode(`data: ${data}\n\n`))
+            // 少し遅延を入れて自然に見せる
+            await new Promise(resolve => setTimeout(resolve, 30))
+          }
+
+          // 発言終了マーカー
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            type: 'discussion_turn_end',
+            creatorId: turn.creatorId
+          })}\n\n`))
+
+          // 発言間の間隔
+          await new Promise(resolve => setTimeout(resolve, 200))
+        }
+
+        // 議論終了マーカー
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+          type: 'discussion_end'
+        })}\n\n`))
+
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'))
+        controller.close()
+      } catch (error) {
+        console.error('Discussion stream error:', error)
+        controller.error(error)
+      }
+    },
+  })
+
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    },
+  })
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const { messages, creators } = await req.json()
+    const { messages, creators, discussionMode, previousAnalyses } = await req.json()
     const lastMessage = messages[messages.length - 1]
     const userInput = lastMessage.content
 
@@ -366,6 +507,11 @@ export async function POST(req: NextRequest) {
     }))
 
     const encoder = new TextEncoder()
+
+    // Discussion mode: generate discussion between creators
+    if (discussionMode && previousAnalyses && previousAnalyses.length > 1) {
+      return handleDiscussionMode(model, previousAnalyses, encoder)
+    }
 
     // Determine creators to analyze
     const creatorsToAnalyze: string[] = creators && creators.length > 0
