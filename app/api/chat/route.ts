@@ -21,6 +21,7 @@ import {
 import {
   analyzeVideoWithGemini,
   analyzeYouTubeWithGemini,
+  GENERATION_CONFIG,
 } from "@/lib/api/gemini";
 import {
   getKnowledgeSummary,
@@ -474,60 +475,29 @@ async function handleDiscussionMode(
           .map((a) => `### ${a.creatorName}の見解\n${a.content}`)
           .join("\n\n");
 
-        const discussionPrompt = `あなたはBuzzTeacherの議論コーディネーターです。
-以下の審査員たちの見解を踏まえて、プロフェッショナルで深い議論をシミュレートしてください。
+        const discussionPrompt = `動画分析の議論をJSON形式で生成してください。
 
-## 各審査員の分析結果
+## 審査員の分析
 ${analysesText}
 
-## 議論の質の基準（最重要）
-各発言には必ず以下を全て含める：
-- **根拠**: なぜそう考えるか（自身のメソッド・経験に基づく具体的理由）
-- **具体例**: 「〇秒目の△△」「このセリフの□□」など具体的なシーン・セリフを指摘
-- **改善案**: 問題点を指摘したら、必ず「私なら〇〇にする」と代替案を提示
-- **数字**: 「完全視聴率が〇%下がる」「最初の2秒で〇%が離脱」など具体的数値
+## ルール
+- 4-6回の短く鋭い発言
+- 各発言は100-200文字
+- 「〇〇さんの指摘は良いが、△△の視点が抜けている」のように具体的に
+- 最後に改善案を統合
 
-## 議論ルール
-1. **各発言は200-400文字**で詳細に分析する（短い発言は禁止）
-2. 「〇〇が弱い」だけでなく「〇〇が弱い。なぜなら△△だから。改善案は□□」の形式
-3. **辛口かつ建設的**: 褒めるだけ・批判するだけはNG。必ず改善につなげる
-4. **対立を恐れない**: 意見が違う場合は明確に反論し、根拠を示す
-5. 各審査員の**独自メソッド**を活かした視点で発言する
-
-## 議論の展開（3ラウンド）
-- **第1ラウンド**: 各審査員が他者の分析の良い点と問題点を具体的に指摘
-- **第2ラウンド**: 反論・補足・代替案の提示。対立点を明確に
-- **第3ラウンド**: 合意できる点と各自の主張を整理
-
-## 禁止事項
-- 「いいですね」「素晴らしい」「同感です」「参考になります」で終わる発言
-- 具体例のない抽象的な批判（「フックが弱い」だけはNG）
-- 150文字以下の短い発言
-- 改善案のない批判
-
-## 最終統合案の要件（重要）
-最後に以下を全て含む詳細な最終統合案を提示：
-1. **議論で指摘された問題点とその解決策**を箇条書きで明記
-2. **秒単位のタイムライン**（0:00-0:02, 0:02-0:07, 0:07-0:XX, ラスト）
-3. **具体的なセリフ・テロップ**を複数パターン提示
-4. **採用した審査員の意見**を明記（「〇〇さんの指摘を反映し...」）
-5. **期待効果**: この改善で見込まれる効果（例：完全視聴率+15%、コメント率+0.5%）
-
-## 出力フォーマット
-JSON配列形式で**8-12ターン**の往復議論を生成し、最後に詳細な最終統合案を追加。
-各発言のcontentは200-400文字で、具体的な根拠・例・改善案を含めること。
-
+## 出力形式（JSON配列のみ）
 [
-  {"creatorId": "xxx", "creatorName": "XXX", "content": "[200-400文字の詳細な発言]", "replyTo": null},
-  {"creatorId": "yyy", "creatorName": "YYY", "content": "[200-400文字の詳細な反論・補足]", "replyTo": "xxx"},
-  ...（8-12ターンの議論）...,
-  {"type": "final", "content": "[詳細な最終統合案]"}
-]
+  {"creatorId": "doshirouto", "creatorName": "ど素人ホテル", "content": "発言内容", "replyTo": null},
+  {"creatorId": "brendan", "creatorName": "Brendan Kane", "content": "反論や補足", "replyTo": "doshirouto"},
+  {"type": "final", "content": "## 改善案\\n\\n### タイムライン\\n- 0:00-0:02: フック案\\n- 0:02-0:07: 興味付け\\n\\n### 具体的なセリフ案\\n..."}
+]`;
 
-JSONのみを出力。説明や前置きは不要。`;
-
-        // Geminiに議論を生成させる
-        const result = await model.generateContent(discussionPrompt);
+        // Geminiに議論を生成させる（明示的なトークン制限付き）
+        const result = await model.generateContent({
+          contents: [{ role: "user", parts: [{ text: discussionPrompt }] }],
+          generationConfig: GENERATION_CONFIG.discussion,
+        });
         const responseText = result.response.text();
 
         // JSONをパース
@@ -552,21 +522,52 @@ JSONのみを出力。説明や前置きは不要。`;
         } catch (parseError) {
           console.error("Discussion JSON parse error:", parseError);
           console.error(
-            "Raw response (first 1000 chars):",
-            responseText.substring(0, 1000),
+            "Raw response (first 500 chars):",
+            responseText.substring(0, 500),
           );
 
-          // フォールバック: Geminiに再度シンプルな形式で生成させる
-          // ここではエラーメッセージを表示
-          discussionTurns = [
-            {
-              creatorId: previousAnalyses[0]?.creatorId || "unknown",
-              creatorName: previousAnalyses[0]?.creatorName || "システム",
-              content:
-                "議論の生成中にエラーが発生しました。「再生成」ボタンで再試行してください。",
-              replyTo: null,
-            },
-          ];
+          // 部分的なJSONの回復を試みる
+          // 不完全なJSON配列から完全なオブジェクトを抽出
+          const partialRecovery = (() => {
+            try {
+              // 完全なオブジェクトを正規表現で抽出
+              const objectMatches = responseText.matchAll(
+                /\{[^{}]*"creatorId"[^{}]*"content"[^{}]*\}/g,
+              );
+              const recovered: DiscussionTurn[] = [];
+              for (const match of objectMatches) {
+                try {
+                  const obj = JSON.parse(match[0]);
+                  if (obj.creatorId && obj.content) {
+                    recovered.push(obj);
+                  }
+                } catch {
+                  // 個別のパースエラーは無視
+                }
+              }
+              return recovered.length > 0 ? recovered : null;
+            } catch {
+              return null;
+            }
+          })();
+
+          if (partialRecovery && partialRecovery.length > 0) {
+            console.log(
+              `Recovered ${partialRecovery.length} discussion turns from partial JSON`,
+            );
+            discussionTurns = partialRecovery;
+          } else {
+            // 完全な回復失敗時のフォールバック
+            discussionTurns = [
+              {
+                creatorId: previousAnalyses[0]?.creatorId || "unknown",
+                creatorName: previousAnalyses[0]?.creatorName || "システム",
+                content:
+                  "議論の生成中にエラーが発生しました。「再生成」ボタンで再試行してください。",
+                replyTo: null,
+              },
+            ];
+          }
         }
 
         // 最終統合案を分離
@@ -801,6 +802,7 @@ export async function POST(req: NextRequest) {
                 role: "user",
                 parts: [{ text: systemPrompt }],
               },
+              generationConfig: GENERATION_CONFIG.chat,
             });
 
             const result = await chat.sendMessageStream(userInput);
@@ -895,6 +897,7 @@ export async function POST(req: NextRequest) {
                 role: "user",
                 parts: [{ text: systemPrompt }],
               },
+              generationConfig: GENERATION_CONFIG.chat,
             });
 
             try {

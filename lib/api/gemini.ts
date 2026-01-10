@@ -6,6 +6,26 @@ import { tmpdir } from "os";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
+// 用途別の生成設定
+export const GENERATION_CONFIG = {
+  analysis: {
+    maxOutputTokens: 4096,
+    temperature: 0.7,
+  },
+  discussion: {
+    maxOutputTokens: 8192,
+    temperature: 0.8,
+  },
+  profile: {
+    maxOutputTokens: 8192,
+    temperature: 0.7,
+  },
+  chat: {
+    maxOutputTokens: 4096,
+    temperature: 0.8,
+  },
+} as const;
+
 // 遅延初期化でエラーを防ぐ
 function getModel() {
   if (!GEMINI_API_KEY) {
@@ -58,18 +78,26 @@ export async function analyzeVideoWithGemini(
       throw new Error("Video processing failed");
     }
 
-    // Analyze
-    const result = await getModel().generateContent([
-      {
-        fileData: {
-          mimeType,
-          fileUri: file.uri,
+    // Analyze with explicit token limit
+    const result = await getModel().generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              fileData: {
+                mimeType,
+                fileUri: file.uri,
+              },
+            },
+            {
+              text: ANALYSIS_PROMPT,
+            },
+          ],
         },
-      },
-      {
-        text: ANALYSIS_PROMPT,
-      },
-    ]);
+      ],
+      generationConfig: GENERATION_CONFIG.analysis,
+    });
 
     // Cleanup
     await unlink(filePath).catch(() => {});
@@ -90,11 +118,19 @@ export async function analyzeYouTubeWithGemini(
   }
 
   try {
-    const result = await getModel().generateContent([
-      {
-        text: `以下のYouTube動画を分析してください。\n動画URL: ${youtubeUrl}\n\n${ANALYSIS_PROMPT}`,
-      },
-    ]);
+    const result = await getModel().generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `以下のYouTube動画を分析してください。\n動画URL: ${youtubeUrl}\n\n${ANALYSIS_PROMPT}`,
+            },
+          ],
+        },
+      ],
+      generationConfig: GENERATION_CONFIG.analysis,
+    });
 
     return result.response.text();
   } catch (error) {
