@@ -26,6 +26,16 @@ export interface CreatorInfo {
 // 利用可能なcreator一覧
 export const AVAILABLE_CREATORS: CreatorInfo[] = [
   {
+    id: "ai",
+    name: "AI統合審査員",
+    description: "3メソッド統合 - ど素人×Hook Point×ごっこ倶楽部",
+    dataCount: 8,
+    followers: "3メソッド統合",
+    achievements: ["ど素人ホテル・Hook Point・ごっこ倶楽部を統合"],
+    works: ["統合フレームワーク", "横断的メソッド分析"],
+    career: ["AI統合ナレッジ", "バズ動画プロフェッショナルBot"],
+  },
+  {
     id: "doshirouto",
     name: "ど素人ホテル",
     description: "片岡力也 - 稀有度×プロセスエコノミー",
@@ -159,6 +169,14 @@ export function getCreatorById(id: string): CreatorInfo | undefined {
 
 // creator別のサマリー定義
 const CREATOR_SUMMARIES: Record<string, string> = {
+  ai: `## AI統合審査員 の核心
+- **3メソッド統合**: ど素人ホテル・Hook Point・ごっこ倶楽部の知見を横断活用
+- **2-3秒ルール**: 最初の数秒で勝負が決まる（3メソッド共通）
+- **稀有度×科学×感情**: 差別化の三位一体アプローチ
+- **仮説→テスト→ピボット**: 科学的にバイラルを生む
+- **価値提供 + エンゲージメント**: 「見て終わり」ではなく「関わりたい」
+- **データで判断し高速で回す**: 完璧より量産、感覚より数値`,
+
   doshirouto: `## ど素人ホテル（片岡力也）の核心
 - **稀有度が全て**: クオリティより「見たことない」が重要
 - **最初の2秒ルール**: 90%が2秒で離脱、パワーワードで始める
