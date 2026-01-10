@@ -14,6 +14,7 @@ import {
 import { CreatorIcons } from "@/components/shared/CreatorIcons";
 import { AnalysisProgress, type ProgressStep } from "./AnalysisProgress";
 import { VideoAnalysisTable } from "./VideoAnalysisTable";
+import { FeedbackForm } from "./FeedbackForm";
 
 interface MessageItemProps {
   message: Message;
@@ -470,6 +471,8 @@ export function MessageItem({
   const isError = message.content?.startsWith("エラー:");
   const showRegenerate =
     !isUser && isLast && !isLoading && message.content && !isError;
+  const showFeedback =
+    !isUser && isLast && !isLoading && message.content && !isError;
   const showEditButton = isUser && !isLoading;
   const showDiscussionButton =
     hasMultipleSections &&
@@ -704,9 +707,21 @@ export function MessageItem({
             </div>
           )}
 
+          {/* Feedback Form */}
+          {showFeedback && (
+            <div className="mt-4 pt-3 border-t border-gray-600">
+              <FeedbackForm
+                messageId={message.id}
+                creators={message.creators || ["doshirouto"]}
+                messageContent={message.content}
+                messageType={message.videoList ? "analysis" : "chat"}
+              />
+            </div>
+          )}
+
           {/* Regenerate button */}
           {showRegenerate && onRegenerate && (
-            <div className="mt-4 pt-3 border-t border-gray-600">
+            <div className="mt-3">
               <button
                 onClick={onRegenerate}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500"

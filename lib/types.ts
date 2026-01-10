@@ -85,6 +85,18 @@ export interface VideoAnalysisResult {
   error?: string;
 }
 
+// フィードバックデータ
+export interface FeedbackData {
+  id?: string;
+  messageId: string;
+  creators: string[];
+  rating: number | null; // 1-5, null = 未評価
+  comment: string | null; // 自由記載, null = なし
+  messageContent?: string;
+  messageType: "chat" | "analysis";
+  createdAt?: Date;
+}
+
 // アカウント分析用：動画アイテム
 export interface VideoItem {
   id: string;
