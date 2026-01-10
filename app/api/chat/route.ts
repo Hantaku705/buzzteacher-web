@@ -323,6 +323,61 @@ ${worstAnalysis?.analysis ? `- **AI分析**: ${worstAnalysis.analysis.slice(0, 2
   report += `---
 
 `;
+
+  // 全動画詳細分析セクションを追加
+  report += `## 📹 全動画詳細分析
+
+以下は分析対象の全${videos.length}件の動画の個別分析です。
+
+`;
+
+  videos.forEach((video, index) => {
+    const analysis = analysisMap.get(video.id);
+    const lvr =
+      video.stats.playCount > 0
+        ? ((video.stats.likeCount / video.stats.playCount) * 100).toFixed(2)
+        : "0.00";
+    const cvr =
+      video.stats.playCount > 0
+        ? ((video.stats.commentCount / video.stats.playCount) * 100).toFixed(3)
+        : "0.000";
+
+    report += `### 動画${index + 1}: ${video.desc.slice(0, 60) || "(説明なし)"}${video.desc.length > 60 ? "..." : ""}
+
+**URL**: ${video.url}
+
+**統計**:
+| 指標 | 数値 |
+|------|------|
+| 再生数 | ${video.stats.playCount.toLocaleString()} |
+| いいね | ${video.stats.likeCount.toLocaleString()} |
+| コメント | ${video.stats.commentCount.toLocaleString()} |
+| シェア | ${video.stats.shareCount.toLocaleString()} |
+| LVR | ${lvr}% |
+| CVR | ${cvr}% |
+
+`;
+
+    if (analysis?.analysis) {
+      report += `**AI分析**:
+${analysis.analysis}
+
+`;
+    } else if (analysis?.error) {
+      report += `**分析エラー**: ${analysis.error}
+
+`;
+    } else {
+      report += `*分析データなし*
+
+`;
+    }
+
+    report += `---
+
+`;
+  });
+
   return report;
 }
 
