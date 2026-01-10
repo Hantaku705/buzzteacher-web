@@ -1,70 +1,74 @@
-'use client'
+"use client";
 
-import { useState, useRef, useEffect } from 'react'
-import { AVAILABLE_CREATORS, CreatorInfo } from '@/lib/knowledge/loader'
+import { useState, useRef, useEffect } from "react";
+import { AVAILABLE_CREATORS, CreatorInfo } from "@/lib/knowledge/loader";
 
 interface CreatorProfileProps {
-  selectedCreators: string[]
-  onSelectCreators: (ids: string[]) => void
+  selectedCreators: string[];
+  onSelectCreators: (ids: string[]) => void;
 }
 
-export function CreatorProfile({ selectedCreators, onSelectCreators }: CreatorProfileProps) {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
+export function CreatorProfile({
+  selectedCreators,
+  onSelectCreators,
+}: CreatorProfileProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // 選択中のCreator情報を取得
   const selectedCreatorInfos = selectedCreators
-    .map(id => AVAILABLE_CREATORS.find(c => c.id === id))
-    .filter((c): c is CreatorInfo => c !== undefined)
+    .map((id) => AVAILABLE_CREATORS.find((c) => c.id === id))
+    .filter((c): c is CreatorInfo => c !== undefined);
 
   // 外側クリックでメニューを閉じる
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuOpen(false)
+        setMenuOpen(false);
       }
     }
     if (menuOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [menuOpen])
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [menuOpen]);
 
   const toggleCreator = (id: string) => {
     if (selectedCreators.includes(id)) {
       // 最低1人は選択を維持
       if (selectedCreators.length > 1) {
-        onSelectCreators(selectedCreators.filter(c => c !== id))
+        onSelectCreators(selectedCreators.filter((c) => c !== id));
       }
     } else {
-      onSelectCreators([...selectedCreators, id])
+      onSelectCreators([...selectedCreators, id]);
     }
-  }
+  };
 
   const toggleAll = () => {
     if (selectedCreators.length === AVAILABLE_CREATORS.length) {
-      onSelectCreators([AVAILABLE_CREATORS[0].id])
+      onSelectCreators([AVAILABLE_CREATORS[0].id]);
     } else {
-      onSelectCreators(AVAILABLE_CREATORS.map(c => c.id))
+      onSelectCreators(AVAILABLE_CREATORS.map((c) => c.id));
     }
-  }
+  };
 
-  const isAllSelected = selectedCreators.length === AVAILABLE_CREATORS.length
+  const isAllSelected = selectedCreators.length === AVAILABLE_CREATORS.length;
 
   // イニシャルを取得
   const getInitial = (name: string) => {
-    return name.charAt(0)
-  }
+    return name.charAt(0);
+  };
 
   // 表示用のCreator名
   const getDisplayName = () => {
-    if (selectedCreatorInfos.length === 0) return '未選択'
-    if (selectedCreatorInfos.length === 1) return selectedCreatorInfos[0].name
-    if (selectedCreatorInfos.length === AVAILABLE_CREATORS.length) return '全員'
-    return `${selectedCreatorInfos.length}人選択中`
-  }
+    if (selectedCreatorInfos.length === 0) return "未選択";
+    if (selectedCreatorInfos.length === 1) return selectedCreatorInfos[0].name;
+    if (selectedCreatorInfos.length === AVAILABLE_CREATORS.length)
+      return "全員";
+    return `${selectedCreatorInfos.length}人選択中`;
+  };
 
   return (
     <div className="p-2 border-b border-gray-700" ref={menuRef}>
@@ -79,7 +83,7 @@ export function CreatorProfile({ selectedCreators, onSelectCreators }: CreatorPr
             <div
               key={creator.id}
               className={`w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white text-sm font-medium border-2 border-[#202123] ${
-                index > 0 ? 'absolute top-0' : ''
+                index > 0 ? "absolute top-0" : ""
               }`}
               style={{
                 left: index > 0 ? `${index * 12}px` : undefined,
@@ -100,7 +104,7 @@ export function CreatorProfile({ selectedCreators, onSelectCreators }: CreatorPr
           {selectedCreatorInfos.length > 3 && (
             <div
               className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs font-medium border-2 border-[#202123] absolute top-0"
-              style={{ left: '36px', zIndex: 0 }}
+              style={{ left: "36px", zIndex: 0 }}
             >
               +{selectedCreatorInfos.length - 3}
             </div>
@@ -108,7 +112,15 @@ export function CreatorProfile({ selectedCreators, onSelectCreators }: CreatorPr
         </div>
 
         {/* 名前と説明 */}
-        <div className="flex-1 text-left min-w-0" style={{ marginLeft: selectedCreatorInfos.length > 1 ? `${Math.min(selectedCreatorInfos.length - 1, 2) * 12}px` : 0 }}>
+        <div
+          className="flex-1 text-left min-w-0"
+          style={{
+            marginLeft:
+              selectedCreatorInfos.length > 1
+                ? `${Math.min(selectedCreatorInfos.length - 1, 2) * 12}px`
+                : 0,
+          }}
+        >
           <div className="text-sm text-white font-medium truncate">
             {getDisplayName()}
           </div>
@@ -126,9 +138,13 @@ export function CreatorProfile({ selectedCreators, onSelectCreators }: CreatorPr
           viewBox="0 0 24 24"
           strokeWidth={1.5}
           stroke="currentColor"
-          className={`w-4 h-4 text-gray-400 transition-transform ${menuOpen ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 text-gray-400 transition-transform ${menuOpen ? "rotate-180" : ""}`}
         >
-          <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="m19.5 8.25-7.5 7.5-7.5-7.5"
+          />
         </svg>
       </button>
 
@@ -145,12 +161,24 @@ export function CreatorProfile({ selectedCreators, onSelectCreators }: CreatorPr
             onClick={toggleAll}
             className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-[#3f3f3f] transition-colors text-white border-b border-gray-700"
           >
-            <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-              isAllSelected ? 'bg-emerald-500 border-emerald-500' : 'border-gray-500'
-            }`}>
+            <div
+              className={`w-4 h-4 rounded border flex items-center justify-center ${
+                isAllSelected
+                  ? "bg-emerald-500 border-emerald-500"
+                  : "border-gray-500"
+              }`}
+            >
               {isAllSelected && (
-                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                <svg
+                  className="w-3 h-3 text-white"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               )}
             </div>
@@ -159,7 +187,7 @@ export function CreatorProfile({ selectedCreators, onSelectCreators }: CreatorPr
 
           {/* Creator一覧 */}
           {AVAILABLE_CREATORS.map((creator) => {
-            const isSelected = selectedCreators.includes(creator.id)
+            const isSelected = selectedCreators.includes(creator.id);
             return (
               <button
                 key={creator.id}
@@ -167,12 +195,24 @@ export function CreatorProfile({ selectedCreators, onSelectCreators }: CreatorPr
                 onClick={() => toggleCreator(creator.id)}
                 className="w-full px-3 py-2 text-left text-sm flex items-center gap-3 hover:bg-[#3f3f3f] transition-colors text-white"
               >
-                <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                  isSelected ? 'bg-emerald-500 border-emerald-500' : 'border-gray-500'
-                }`}>
+                <div
+                  className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                    isSelected
+                      ? "bg-emerald-500 border-emerald-500"
+                      : "border-gray-500"
+                  }`}
+                >
                   {isSelected && (
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    <svg
+                      className="w-3 h-3 text-white"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                   )}
                 </div>
@@ -193,19 +233,27 @@ export function CreatorProfile({ selectedCreators, onSelectCreators }: CreatorPr
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate">{creator.name}</span>
-                    <span className={`text-xs flex-shrink-0 ${
-                      creator.dataCount > 0 ? 'text-emerald-400' : 'text-gray-500'
-                    }`}>
-                      {creator.dataCount > 0 ? `${creator.dataCount}件` : '準備中'}
+                    <span
+                      className={`text-xs flex-shrink-0 ${
+                        creator.dataCount > 0
+                          ? "text-emerald-400"
+                          : "text-gray-500"
+                      }`}
+                    >
+                      {creator.dataCount > 0
+                        ? `${creator.dataCount}件`
+                        : "準備中"}
                     </span>
                   </div>
-                  <div className="text-xs text-gray-400 truncate">{creator.description}</div>
+                  <div className="text-xs text-gray-400 truncate">
+                    {creator.description}
+                  </div>
                 </div>
               </button>
-            )
+            );
           })}
         </div>
       )}
     </div>
-  )
+  );
 }

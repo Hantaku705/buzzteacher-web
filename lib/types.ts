@@ -1,78 +1,85 @@
 export interface CreatorSection {
-  creatorId: string
-  creatorName: string
-  content: string
-  isStreaming?: boolean
+  creatorId: string;
+  creatorName: string;
+  content: string;
+  isStreaming?: boolean;
 }
 
 // 議論の発言
 export interface DiscussionTurn {
-  creatorId: string
-  creatorName: string
-  content: string
-  replyTo?: string  // 返信先のcreatorId
-  isStreaming?: boolean
+  creatorId: string;
+  creatorName: string;
+  content: string;
+  replyTo?: string; // 返信先のcreatorId
+  isStreaming?: boolean;
+}
+
+// 最終統合案
+export interface DiscussionFinal {
+  content: string;
+  isStreaming?: boolean;
 }
 
 export interface Message {
-  id: string
-  conversation_id?: string
-  role: 'user' | 'assistant'
-  content: string
-  creators?: string[]
-  createdAt: Date
-  creatorSections?: CreatorSection[]
-  discussion?: DiscussionTurn[]        // 議論スレッド
-  canStartDiscussion?: boolean         // 議論開始可能フラグ
+  id: string;
+  conversation_id?: string;
+  role: "user" | "assistant";
+  content: string;
+  creators?: string[];
+  createdAt: Date;
+  creatorSections?: CreatorSection[];
+  discussion?: DiscussionTurn[]; // 議論スレッド
+  discussionFinal?: DiscussionFinal; // 最終統合案
+  canStartDiscussion?: boolean; // 議論開始可能フラグ
 }
 
 export interface Conversation {
-  id: string
-  user_id: string
-  title: string
-  creators?: string[]
-  created_at: string
-  updated_at: string
+  id: string;
+  user_id: string;
+  title: string;
+  creators?: string[];
+  created_at: string;
+  updated_at: string;
 }
 
 export interface User {
-  id: string
-  email: string
-  display_name: string
-  avatar_url: string | null
+  id: string;
+  email: string;
+  display_name: string;
+  avatar_url: string | null;
 }
 
 export interface InsightData {
-  url: string
-  platform: 'TikTok' | 'YouTube' | 'Instagram' | 'X'
-  view: number | null
-  like: number | null
-  comment: number | null
-  share: number | null
-  save: number | null
-  durationSec: number | null
-  thumbnail?: string
+  url: string;
+  platform: "TikTok" | "YouTube" | "Instagram" | "X";
+  view: number | null;
+  like: number | null;
+  comment: number | null;
+  share: number | null;
+  save: number | null;
+  durationSec: number | null;
+  thumbnail?: string;
 }
 
 export interface AnalysisResult {
-  narration: string
-  telop: string
-  cutCount: number
-  hookContent: string
-  compositionPlan: string
-  secPerCut: number
+  narration: string;
+  telop: string;
+  cutCount: number;
+  hookContent: string;
+  compositionPlan: string;
+  secPerCut: number;
 }
 
 export interface VideoAnalysisResult {
-  videoId: string
-  videoUrl: string
-  desc: string
+  videoId: string;
+  videoUrl: string;
+  desc: string;
   stats: {
-    playCount: number
-    likeCount: number
-    commentCount: number
-    shareCount: number
-  }
-  analysis: string | null
-  error?: string
+    playCount: number;
+    likeCount: number;
+    commentCount: number;
+    shareCount: number;
+  };
+  analysis: string | null;
+  error?: string;
 }

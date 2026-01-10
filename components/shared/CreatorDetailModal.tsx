@@ -1,55 +1,61 @@
-'use client'
+"use client";
 
-import { useEffect } from 'react'
-import { CreatorInfo, getCreatorSummary } from '@/lib/knowledge/loader'
+import { useEffect } from "react";
+import { CreatorInfo, getCreatorSummary } from "@/lib/knowledge/loader";
 
 interface CreatorDetailModalProps {
-  creator: CreatorInfo
-  onClose: () => void
+  creator: CreatorInfo;
+  onClose: () => void;
 }
 
 function getSocialUrl(platform: string, username: string): string {
   switch (platform) {
-    case 'threads':
-      return `https://www.threads.net/@${username}`
-    case 'twitter':
-      return `https://x.com/${username}`
-    case 'tiktok':
-      return `https://www.tiktok.com/@${username}`
-    case 'youtube':
-      return `https://www.youtube.com/channel/${username}`
-    case 'instagram':
-      return `https://www.instagram.com/${username}`
-    case 'note':
-      return `https://note.com/${username}`
+    case "threads":
+      return `https://www.threads.net/@${username}`;
+    case "twitter":
+      return `https://x.com/${username}`;
+    case "tiktok":
+      return `https://www.tiktok.com/@${username}`;
+    case "youtube":
+      return `https://www.youtube.com/channel/${username}`;
+    case "instagram":
+      return `https://www.instagram.com/${username}`;
+    case "note":
+      return `https://note.com/${username}`;
     default:
-      return '#'
+      return "#";
   }
 }
 
 const platformIcons: Record<string, { icon: string; color: string }> = {
-  threads: { icon: '@', color: 'bg-gray-700' },
-  twitter: { icon: 'X', color: 'bg-black' },
-  tiktok: { icon: 'T', color: 'bg-black' },
-  youtube: { icon: 'Y', color: 'bg-red-600' },
-  instagram: { icon: 'I', color: 'bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400' },
-  note: { icon: 'N', color: 'bg-green-600' },
-}
+  threads: { icon: "@", color: "bg-gray-700" },
+  twitter: { icon: "X", color: "bg-black" },
+  tiktok: { icon: "T", color: "bg-black" },
+  youtube: { icon: "Y", color: "bg-red-600" },
+  instagram: {
+    icon: "I",
+    color: "bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400",
+  },
+  note: { icon: "N", color: "bg-green-600" },
+};
 
-export function CreatorDetailModal({ creator, onClose }: CreatorDetailModalProps) {
-  const summary = getCreatorSummary(creator.id)
+export function CreatorDetailModal({
+  creator,
+  onClose,
+}: CreatorDetailModalProps) {
+  const summary = getCreatorSummary(creator.id);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [onClose])
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [onClose]);
 
   const socialAccounts = creator.accounts
     ? Object.entries(creator.accounts).filter(([, value]) => value)
-    : []
+    : [];
 
   return (
     <div
@@ -76,7 +82,9 @@ export function CreatorDetailModal({ creator, onClose }: CreatorDetailModalProps
             </div>
             <div className="flex-1 min-w-0">
               <h2 className="text-xl font-bold text-white">{creator.name}</h2>
-              <p className="text-gray-400 text-sm mt-1">{creator.description}</p>
+              <p className="text-gray-400 text-sm mt-1">
+                {creator.description}
+              </p>
               {creator.dataCount > 0 && (
                 <p className="text-emerald-400 text-xs mt-2">
                   データ: {creator.dataCount}件
@@ -88,8 +96,18 @@ export function CreatorDetailModal({ creator, onClose }: CreatorDetailModalProps
               className="p-2 hover:bg-gray-700 rounded-lg transition-colors text-gray-400 hover:text-white"
               aria-label="閉じる"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -98,7 +116,10 @@ export function CreatorDetailModal({ creator, onClose }: CreatorDetailModalProps
           {socialAccounts.length > 0 && (
             <div className="flex gap-2 mt-4 flex-wrap">
               {socialAccounts.map(([platform, username]) => {
-                const { icon, color } = platformIcons[platform] || { icon: '?', color: 'bg-gray-600' }
+                const { icon, color } = platformIcons[platform] || {
+                  icon: "?",
+                  color: "bg-gray-600",
+                };
                 return (
                   <a
                     key={platform}
@@ -110,7 +131,7 @@ export function CreatorDetailModal({ creator, onClose }: CreatorDetailModalProps
                   >
                     {icon}
                   </a>
-                )
+                );
               })}
             </div>
           )}
@@ -119,7 +140,7 @@ export function CreatorDetailModal({ creator, onClose }: CreatorDetailModalProps
         {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[50vh]">
           <div className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">
-            {summary.replace(/^## .*\n/, '').replace(/- \*\*/g, '\n- **')}
+            {summary.replace(/^## .*\n/, "").replace(/- \*\*/g, "\n- **")}
           </div>
         </div>
 
@@ -134,5 +155,5 @@ export function CreatorDetailModal({ creator, onClose }: CreatorDetailModalProps
         </div>
       </div>
     </div>
-  )
+  );
 }

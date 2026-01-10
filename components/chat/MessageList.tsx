@@ -1,21 +1,30 @@
-'use client'
+"use client";
 
-import { Message } from '@/lib/types'
-import { MessageItem } from './MessageItem'
-import type { ProgressStep } from './AnalysisProgress'
+import { Message } from "@/lib/types";
+import { MessageItem } from "./MessageItem";
+import type { ProgressStep } from "./AnalysisProgress";
 
 interface MessageListProps {
-  messages: Message[]
-  onRegenerate?: () => void
-  onEdit?: (messageId: string, newContent: string) => void
-  onStartDiscussion?: (messageId: string) => void
-  isLoading?: boolean
-  loadingStage?: string | null
-  loadingPercent?: number | null
-  loadingSteps?: ProgressStep[] | null
+  messages: Message[];
+  onRegenerate?: () => void;
+  onEdit?: (messageId: string, newContent: string) => void;
+  onStartDiscussion?: (messageId: string) => void;
+  isLoading?: boolean;
+  loadingStage?: string | null;
+  loadingPercent?: number | null;
+  loadingSteps?: ProgressStep[] | null;
 }
 
-export function MessageList({ messages, onRegenerate, onEdit, onStartDiscussion, isLoading, loadingStage, loadingPercent, loadingSteps }: MessageListProps) {
+export function MessageList({
+  messages,
+  onRegenerate,
+  onEdit,
+  onStartDiscussion,
+  isLoading,
+  loadingStage,
+  loadingPercent,
+  loadingSteps,
+}: MessageListProps) {
   return (
     <div className="flex flex-col">
       {messages.map((message, index) => (
@@ -33,5 +42,5 @@ export function MessageList({ messages, onRegenerate, onEdit, onStartDiscussion,
         />
       ))}
     </div>
-  )
+  );
 }

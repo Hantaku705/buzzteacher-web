@@ -1,29 +1,25 @@
-'use client'
+"use client";
 
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const handleGoogleLogin = async () => {
-    const supabase = createClient()
+    const supabase = createClient();
     await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
-    })
-  }
+    });
+  };
 
   return (
     <div className="min-h-screen bg-[#343541] flex items-center justify-center p-4">
       <div className="bg-[#40414f] p-8 rounded-xl shadow-xl max-w-md w-full">
         <div className="text-center mb-8">
           <div className="text-5xl mb-4">🎬</div>
-          <h1 className="text-2xl font-bold text-white mb-2">
-            BuzzTeacher
-          </h1>
-          <p className="text-gray-400">
-            バズ動画のプロがあなたをサポート
-          </p>
+          <h1 className="text-2xl font-bold text-white mb-2">BuzzTeacher</h1>
+          <p className="text-gray-400">バズ動画のプロがあなたをサポート</p>
         </div>
 
         <button
@@ -72,5 +68,5 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
-  )
+  );
 }

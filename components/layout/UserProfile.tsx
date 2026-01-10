@@ -1,15 +1,15 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { User } from '@/lib/types'
+import { useState } from "react";
+import { User } from "@/lib/types";
 
 interface UserProfileProps {
-  user: User | null
-  onLogout: () => void
+  user: User | null;
+  onLogout: () => void;
 }
 
 export function UserProfile({ user, onLogout }: UserProfileProps) {
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Guest mode - show login button
   if (!user) {
@@ -36,7 +36,7 @@ export function UserProfile({ user, onLogout }: UserProfileProps) {
           ログイン
         </a>
       </div>
-    )
+    );
   }
 
   return (
@@ -53,7 +53,7 @@ export function UserProfile({ user, onLogout }: UserProfileProps) {
           />
         ) : (
           <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white text-sm font-medium">
-            {user.display_name?.charAt(0) || user.email?.charAt(0) || '?'}
+            {user.display_name?.charAt(0) || user.email?.charAt(0) || "?"}
           </div>
         )}
         <div className="flex-1 text-left">
@@ -87,8 +87,8 @@ export function UserProfile({ user, onLogout }: UserProfileProps) {
           <div className="absolute bottom-full left-2 right-2 mb-2 bg-[#2a2b32] rounded-lg shadow-lg border border-gray-600 py-1 z-20">
             <button
               onClick={() => {
-                onLogout()
-                setMenuOpen(false)
+                onLogout();
+                setMenuOpen(false);
               }}
               className="w-full px-4 py-2 text-left text-sm text-white hover:bg-[#40414f] flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-inset"
             >
@@ -112,5 +112,5 @@ export function UserProfile({ user, onLogout }: UserProfileProps) {
         </>
       )}
     </div>
-  )
+  );
 }

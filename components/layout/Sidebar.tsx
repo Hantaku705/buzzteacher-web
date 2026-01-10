@@ -1,24 +1,24 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { Conversation, User } from '@/lib/types'
-import { ConversationList } from './ConversationList'
-import { UserProfile } from './UserProfile'
-import { CreatorProfile } from './CreatorProfile'
+import { useState } from "react";
+import Link from "next/link";
+import { Conversation, User } from "@/lib/types";
+import { ConversationList } from "./ConversationList";
+import { UserProfile } from "./UserProfile";
+import { CreatorProfile } from "./CreatorProfile";
 
 interface SidebarProps {
-  conversations: Conversation[]
-  currentConversationId: string | null
-  onNewChat: () => void
-  onSelectConversation: (id: string) => void
-  onDeleteConversation: (id: string) => void
-  user: User | null
-  onLogout: () => void
-  isOpen: boolean
-  onClose: () => void
-  selectedCreators: string[]
-  onSelectCreators: (ids: string[]) => void
+  conversations: Conversation[];
+  currentConversationId: string | null;
+  onNewChat: () => void;
+  onSelectConversation: (id: string) => void;
+  onDeleteConversation: (id: string) => void;
+  user: User | null;
+  onLogout: () => void;
+  isOpen: boolean;
+  onClose: () => void;
+  selectedCreators: string[];
+  onSelectCreators: (ids: string[]) => void;
 }
 
 export function Sidebar({
@@ -34,11 +34,11 @@ export function Sidebar({
   selectedCreators,
   onSelectCreators,
 }: SidebarProps) {
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState("");
 
   const filteredConversations = conversations.filter((conv) =>
-    conv.title.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+    conv.title.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   return (
     <>
@@ -56,15 +56,15 @@ export function Sidebar({
           fixed md:static inset-y-0 left-0 z-50
           w-[260px] bg-[#202123] flex flex-col
           transform transition-transform duration-300 ease-in-out
-          ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+          ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
         `}
       >
         {/* New Chat Button */}
         <div className="p-2">
           <button
             onClick={() => {
-              onNewChat()
-              onClose()
+              onNewChat();
+              onClose();
             }}
             className="w-full flex items-center gap-3 px-3 py-3 rounded-lg border border-gray-600 hover:bg-[#2a2b32] transition-colors text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-[#202123]"
           >
@@ -128,8 +128,8 @@ export function Sidebar({
                 conversations={filteredConversations}
                 currentConversationId={currentConversationId}
                 onSelect={(id) => {
-                  onSelectConversation(id)
-                  onClose()
+                  onSelectConversation(id);
+                  onClose();
                 }}
                 onDelete={onDeleteConversation}
               />
@@ -192,5 +192,5 @@ export function Sidebar({
         <UserProfile user={user} onLogout={onLogout} />
       </aside>
     </>
-  )
+  );
 }

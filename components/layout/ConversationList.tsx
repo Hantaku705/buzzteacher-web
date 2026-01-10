@@ -1,47 +1,47 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Conversation } from '@/lib/types'
-import { CreatorIcons } from '@/components/shared/CreatorIcons'
+import { useState } from "react";
+import { Conversation } from "@/lib/types";
+import { CreatorIcons } from "@/components/shared/CreatorIcons";
 
 interface ConversationListProps {
-  conversations: Conversation[]
-  currentConversationId: string | null
-  onSelect: (id: string) => void
-  onDelete: (id: string) => void
+  conversations: Conversation[];
+  currentConversationId: string | null;
+  onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
 function groupByDate(conversations: Conversation[]) {
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const yesterday = new Date(today.getTime() - 86400000)
-  const weekAgo = new Date(today.getTime() - 7 * 86400000)
-  const monthAgo = new Date(today.getTime() - 30 * 86400000)
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today.getTime() - 86400000);
+  const weekAgo = new Date(today.getTime() - 7 * 86400000);
+  const monthAgo = new Date(today.getTime() - 30 * 86400000);
 
   const groups: { label: string; items: Conversation[] }[] = [
-    { label: '今日', items: [] },
-    { label: '昨日', items: [] },
-    { label: '過去7日間', items: [] },
-    { label: '過去30日間', items: [] },
-    { label: 'それ以前', items: [] },
-  ]
+    { label: "今日", items: [] },
+    { label: "昨日", items: [] },
+    { label: "過去7日間", items: [] },
+    { label: "過去30日間", items: [] },
+    { label: "それ以前", items: [] },
+  ];
 
   conversations.forEach((conv) => {
-    const date = new Date(conv.updated_at)
+    const date = new Date(conv.updated_at);
     if (date >= today) {
-      groups[0].items.push(conv)
+      groups[0].items.push(conv);
     } else if (date >= yesterday) {
-      groups[1].items.push(conv)
+      groups[1].items.push(conv);
     } else if (date >= weekAgo) {
-      groups[2].items.push(conv)
+      groups[2].items.push(conv);
     } else if (date >= monthAgo) {
-      groups[3].items.push(conv)
+      groups[3].items.push(conv);
     } else {
-      groups[4].items.push(conv)
+      groups[4].items.push(conv);
     }
-  })
+  });
 
-  return groups.filter((g) => g.items.length > 0)
+  return groups.filter((g) => g.items.length > 0);
 }
 
 export function ConversationList({
@@ -50,15 +50,15 @@ export function ConversationList({
   onSelect,
   onDelete,
 }: ConversationListProps) {
-  const [menuOpenId, setMenuOpenId] = useState<string | null>(null)
-  const groups = groupByDate(conversations)
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const groups = groupByDate(conversations);
 
   if (conversations.length === 0) {
     return (
       <div className="p-4 text-center text-gray-400 text-sm">
         チャット履歴がありません
       </div>
-    )
+    );
   }
 
   return (
@@ -75,13 +75,13 @@ export function ConversationList({
                 group relative flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer
                 ${
                   currentConversationId === conv.id
-                    ? 'bg-[#343541]'
-                    : 'hover:bg-[#2a2b32]'
+                    ? "bg-[#343541]"
+                    : "hover:bg-[#2a2b32]"
                 }
               `}
               onClick={() => onSelect(conv.id)}
             >
-              <CreatorIcons creatorIds={conv.creators || ['doshirouto']} />
+              <CreatorIcons creatorIds={conv.creators || ["doshirouto"]} />
               <span className="text-sm text-white truncate flex-1">
                 {conv.title}
               </span>
@@ -89,8 +89,8 @@ export function ConversationList({
               {/* Menu button */}
               <button
                 onClick={(e) => {
-                  e.stopPropagation()
-                  setMenuOpenId(menuOpenId === conv.id ? null : conv.id)
+                  e.stopPropagation();
+                  setMenuOpenId(menuOpenId === conv.id ? null : conv.id);
                 }}
                 className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[#40414f] rounded transition-opacity focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 aria-label="メニューを開く"
@@ -116,9 +116,9 @@ export function ConversationList({
                 <div className="absolute right-0 top-full mt-1 bg-[#2a2b32] rounded-lg shadow-lg border border-gray-600 py-1 z-10">
                   <button
                     onClick={(e) => {
-                      e.stopPropagation()
-                      onDelete(conv.id)
-                      setMenuOpenId(null)
+                      e.stopPropagation();
+                      onDelete(conv.id);
+                      setMenuOpenId(null);
                     }}
                     className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-[#40414f] flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-inset"
                   >
@@ -145,5 +145,5 @@ export function ConversationList({
         </div>
       ))}
     </div>
-  )
+  );
 }
