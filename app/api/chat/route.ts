@@ -1,5 +1,8 @@
 import { NextRequest } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+
+// Vercel function timeout (Pro plan: max 300 seconds)
+export const maxDuration = 300;
 import {
   detectPlatform,
   extractVideoUrl,
@@ -679,6 +682,9 @@ export async function POST(req: NextRequest) {
       const stream = new ReadableStream({
         async start(controller) {
           try {
+            // 即座に初期イベントを送信（ストリームが機能していることを確認）
+            sendProgress(controller, "分析を開始しています...", 0);
+
             // Analyze video with progress updates
             let analysisContext = "";
             if (videoUrl && platform) {
@@ -746,6 +752,9 @@ export async function POST(req: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
+          // 即座に初期イベントを送信（ストリームが機能していることを確認）
+          sendProgress(controller, "分析を開始しています...", 0);
+
           // Analyze video with progress updates (only once for all creators)
           let analysisContext = "";
           if (videoUrl && platform) {
@@ -1268,12 +1277,24 @@ async function analyzeTikTokProfile(
       updateStep("report", "completed");
       onProgress("分析完了", 100, undefined, undefined, steps);
     } else {
+      // エラー時もステップを更新
+      updateStep("profile", "error", "取得失敗");
+      onProgress(
+        "プロフィール取得に失敗しました",
+        0,
+        undefined,
+        undefined,
+        steps,
+      );
       errors.push(
         "プロフィール情報の取得に失敗しました（APIキー未設定またはアカウントが非公開）",
       );
     }
   } catch (error) {
     console.error("Profile analysis error:", error);
+    // エラー時もステップを更新
+    updateStep("profile", "error", "エラー発生");
+    onProgress("分析中にエラーが発生しました", 0, undefined, undefined, steps);
     errors.push("プロフィール分析中に予期せぬエラーが発生しました");
   }
 

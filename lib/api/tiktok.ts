@@ -133,6 +133,25 @@ export async function downloadTikTokVideo(url: string): Promise<Buffer | null> {
   }
 }
 
+// Helper to create fetch with timeout
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs: number = 30000,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export async function getTikTokUserVideos(
   profileUrl: string,
   count: number = 10,
@@ -150,7 +169,7 @@ export async function getTikTokUserVideos(
 
   try {
     // Get user info first to obtain secUid
-    const userRes = await fetch(
+    const userRes = await fetchWithTimeout(
       `https://tiktok-api23.p.rapidapi.com/api/user/info?uniqueId=${username}`,
       {
         headers: {
@@ -158,6 +177,7 @@ export async function getTikTokUserVideos(
           "X-RapidAPI-Host": "tiktok-api23.p.rapidapi.com",
         },
       },
+      30000, // 30 second timeout
     );
 
     if (!userRes.ok) {
@@ -175,7 +195,7 @@ export async function getTikTokUserVideos(
     }
 
     // Get user posts
-    const postsRes = await fetch(
+    const postsRes = await fetchWithTimeout(
       `https://tiktok-api23.p.rapidapi.com/api/user/posts?secUid=${encodeURIComponent(secUid)}&count=${count}`,
       {
         headers: {
@@ -183,6 +203,7 @@ export async function getTikTokUserVideos(
           "X-RapidAPI-Host": "tiktok-api23.p.rapidapi.com",
         },
       },
+      30000, // 30 second timeout
     );
 
     if (!postsRes.ok) {
