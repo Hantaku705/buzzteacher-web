@@ -211,13 +211,14 @@ export default function Home() {
 
     // Create or get conversation (only for authenticated users)
     let convId = currentConversationId;
+    const isNewConversation = !convId;
     if (user && !convId) {
       try {
         const response = await fetch("/api/conversations", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            title: content.slice(0, 50),
+            title: "New Chat",
             creators: selectedCreators,
           }),
         });
@@ -418,6 +419,23 @@ export default function Home() {
           selectedCreators,
           videoListData,
         );
+
+        // Generate title for new conversations
+        if (isNewConversation) {
+          try {
+            await fetch(`/api/conversations/${convId}/generate-title`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userMessage: content,
+                aiResponse: fullContent,
+              }),
+            });
+          } catch (titleError) {
+            console.error("Failed to generate title:", titleError);
+          }
+        }
+
         await loadConversations();
       }
     } catch (error) {
