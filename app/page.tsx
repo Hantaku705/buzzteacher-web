@@ -11,6 +11,7 @@ import {
   CreatorSection,
   DiscussionTurn,
   DiscussionFinal,
+  VideoItem,
 } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import type { ProgressStep } from "@/components/chat/AnalysisProgress";
@@ -119,12 +120,14 @@ export default function Home() {
               role: "user" | "assistant";
               content: string;
               creators?: string[];
+              video_list?: VideoItem[];
               created_at: string;
             }) => ({
               id: m.id,
               role: m.role,
               content: m.content,
               creators: m.creators,
+              videoList: m.video_list,
               createdAt: new Date(m.created_at),
             }),
           ) || [],
@@ -178,12 +181,13 @@ export default function Home() {
       role: "user" | "assistant",
       content: string,
       creators?: string[],
+      videoList?: VideoItem[],
     ) => {
       try {
         await fetch(`/api/conversations/${conversationId}/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ role, content, creators }),
+          body: JSON.stringify({ role, content, creators, videoList }),
         });
       } catch (error) {
         console.error("Failed to save message:", error);
@@ -274,6 +278,7 @@ export default function Home() {
       let buffer = "";
       const sections: CreatorSection[] = [];
       let currentSection: CreatorSection | null = null;
+      let videoListData: VideoItem[] | undefined;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -328,6 +333,7 @@ export default function Home() {
                 }
               } else if (json.type === "video_list") {
                 // プロフィール分析時：動画一覧をセット
+                videoListData = json.videos;
                 setMessages((prev) =>
                   prev.map((m) =>
                     m.id === assistantMessageId
@@ -405,7 +411,13 @@ export default function Home() {
 
       // Save assistant message (only for authenticated users)
       if (user && convId && fullContent) {
-        await saveMessage(convId, "assistant", fullContent, selectedCreators);
+        await saveMessage(
+          convId,
+          "assistant",
+          fullContent,
+          selectedCreators,
+          videoListData,
+        );
         await loadConversations();
       }
     } catch (error) {

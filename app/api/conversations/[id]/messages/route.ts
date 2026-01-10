@@ -81,7 +81,7 @@ export async function POST(
       );
     }
 
-    const { role, content, creators } = await request.json();
+    const { role, content, creators, videoList } = await request.json();
 
     const { data, error } = await supabase
       .from("messages")
@@ -90,6 +90,7 @@ export async function POST(
         role,
         content,
         creators: creators || null,
+        video_list: videoList || null,
       })
       .select()
       .single();
