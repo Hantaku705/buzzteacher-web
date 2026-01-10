@@ -256,10 +256,15 @@ function generateQuantitativeReport(
 }
 
 // 動画ランキング生成
+interface VideoRankingResult {
+  ranking: string; // Top3 + Worst1（Geminiコンテキスト用）
+  videoDetails: string; // 全動画詳細（直接出力用）
+}
+
 function generateVideoRanking(
   videos: TikTokVideo[],
   analysisResults: VideoAnalysisResult[],
-): string {
+): VideoRankingResult {
   // 再生数でソート
   const sortedVideos = [...videos].sort(
     (a, b) => b.stats.playCount - a.stats.playCount,
@@ -271,7 +276,8 @@ function generateVideoRanking(
   const analysisMap = new Map<string, VideoAnalysisResult>();
   analysisResults.forEach((r) => analysisMap.set(r.videoId, r));
 
-  let report = `## 4. 動画別分析（Top 3 + 要改善 1）
+  // === ランキング部分（Geminiコンテキスト用） ===
+  let ranking = `## 4. 動画別分析（Top 3 + 要改善 1）
 
 `;
 
@@ -290,7 +296,7 @@ function generateVideoRanking(
         : "0";
     const analysis = analysisMap.get(video.id);
 
-    report += `### ${medals[index]} ${index + 1}位: ${video.desc.slice(0, 40) || "(説明なし)"}${video.desc.length > 40 ? "..." : ""}
+    ranking += `### ${medals[index]} ${index + 1}位: ${video.desc.slice(0, 40) || "(説明なし)"}${video.desc.length > 40 ? "..." : ""}
 - **再生**: ${video.stats.playCount.toLocaleString()} / **いいね**: ${video.stats.likeCount.toLocaleString()} / **ER**: ${er}%
 - URL: ${video.url}
 ${analysis?.analysis ? `- **AI分析**: ${analysis.analysis.slice(0, 200)}...` : ""}
@@ -312,7 +318,7 @@ ${analysis?.analysis ? `- **AI分析**: ${analysis.analysis.slice(0, 200)}...` :
         : "0";
     const worstAnalysis = analysisMap.get(worst.id);
 
-    report += `### ⚠️ 要改善: ${worst.desc.slice(0, 40) || "(説明なし)"}${worst.desc.length > 40 ? "..." : ""}
+    ranking += `### ⚠️ 要改善: ${worst.desc.slice(0, 40) || "(説明なし)"}${worst.desc.length > 40 ? "..." : ""}
 - **再生**: ${worst.stats.playCount.toLocaleString()} / **いいね**: ${worst.stats.likeCount.toLocaleString()} / **ER**: ${worstEr}%
 - URL: ${worst.url}
 ${worstAnalysis?.analysis ? `- **AI分析**: ${worstAnalysis.analysis.slice(0, 200)}...` : ""}
@@ -320,12 +326,16 @@ ${worstAnalysis?.analysis ? `- **AI分析**: ${worstAnalysis.analysis.slice(0, 2
 `;
   }
 
-  report += `---
+  ranking += `---
 
 `;
 
-  // 全動画詳細分析セクションを追加
-  report += `## 📹 全動画詳細分析
+  // === 全動画詳細（直接出力用） ===
+  let videoDetails = `
+
+---
+
+## 📹 全動画詳細分析
 
 以下は分析対象の全${videos.length}件の動画の個別分析です。
 
@@ -342,7 +352,7 @@ ${worstAnalysis?.analysis ? `- **AI分析**: ${worstAnalysis.analysis.slice(0, 2
         ? ((video.stats.commentCount / video.stats.playCount) * 100).toFixed(3)
         : "0.000";
 
-    report += `### 動画${index + 1}: ${video.desc.slice(0, 60) || "(説明なし)"}${video.desc.length > 60 ? "..." : ""}
+    videoDetails += `### 動画${index + 1}: ${video.desc.slice(0, 60) || "(説明なし)"}${video.desc.length > 60 ? "..." : ""}
 
 **URL**: ${video.url}
 
@@ -359,26 +369,26 @@ ${worstAnalysis?.analysis ? `- **AI分析**: ${worstAnalysis.analysis.slice(0, 2
 `;
 
     if (analysis?.analysis) {
-      report += `**AI分析**:
+      videoDetails += `**AI分析**:
 ${analysis.analysis}
 
 `;
     } else if (analysis?.error) {
-      report += `**分析エラー**: ${analysis.error}
+      videoDetails += `**分析エラー**: ${analysis.error}
 
 `;
     } else {
-      report += `*分析データなし*
+      videoDetails += `*分析データなし*
 
 `;
     }
 
-    report += `---
+    videoDetails += `---
 
 `;
   });
 
-  return report;
+  return { ranking, videoDetails };
 }
 
 // 定性分析プロンプト生成
@@ -742,8 +752,9 @@ export async function POST(req: NextRequest) {
 
             // Analyze video with progress updates
             let analysisContext = "";
+            let videoDetailsOutput = ""; // プロフィール分析時の全動画詳細
             if (videoUrl && platform) {
-              analysisContext = await analyzeVideoWithProgress(
+              const analysisResult = await analyzeVideoWithProgress(
                 videoUrl,
                 platform,
                 (stage, percent, current, total, steps) =>
@@ -756,6 +767,8 @@ export async function POST(req: NextRequest) {
                     steps,
                   ),
               );
+              analysisContext = analysisResult.context;
+              videoDetailsOutput = analysisResult.videoDetails || "";
             }
 
             sendProgress(controller, "アドバイスを生成中...");
@@ -784,6 +797,15 @@ export async function POST(req: NextRequest) {
                 controller.enqueue(encoder.encode(`data: ${data}\n\n`));
               }
             }
+
+            // プロフィール分析時：全動画詳細を直接出力（Geminiのトークン制限を回避）
+            if (videoDetailsOutput) {
+              const detailsData = JSON.stringify({
+                choices: [{ delta: { content: videoDetailsOutput } }],
+              });
+              controller.enqueue(encoder.encode(`data: ${detailsData}\n\n`));
+            }
+
             controller.enqueue(encoder.encode("data: [DONE]\n\n"));
             controller.close();
           } catch (error) {
@@ -812,13 +834,16 @@ export async function POST(req: NextRequest) {
 
           // Analyze video with progress updates (only once for all creators)
           let analysisContext = "";
+          let videoDetailsOutput = ""; // プロフィール分析時の全動画詳細
           if (videoUrl && platform) {
-            analysisContext = await analyzeVideoWithProgress(
+            const analysisResult = await analyzeVideoWithProgress(
               videoUrl,
               platform,
               (stage, percent, current, total, steps) =>
                 sendProgress(controller, stage, percent, current, total, steps),
             );
+            analysisContext = analysisResult.context;
+            videoDetailsOutput = analysisResult.videoDetails || "";
           }
 
           for (const creatorId of creatorsToAnalyze) {
@@ -894,6 +919,14 @@ export async function POST(req: NextRequest) {
             );
           }
 
+          // プロフィール分析時：全動画詳細を直接出力（Geminiのトークン制限を回避）
+          if (videoDetailsOutput) {
+            const detailsData = JSON.stringify({
+              choices: [{ delta: { content: videoDetailsOutput } }],
+            });
+            controller.enqueue(encoder.encode(`data: ${detailsData}\n\n`));
+          }
+
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
         } catch (error) {
@@ -924,6 +957,12 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// analyzeVideoWithProgress の戻り値型
+interface AnalysisResult {
+  context: string; // Gemini用コンテキスト
+  videoDetails?: string; // プロフィール分析時のみ：全動画詳細（直接出力用）
+}
+
 async function analyzeVideoWithProgress(
   url: string,
   platform: string,
@@ -934,7 +973,7 @@ async function analyzeVideoWithProgress(
     total?: number,
     steps?: ProgressStepType[],
   ) => void,
-): Promise<string> {
+): Promise<AnalysisResult> {
   // Check if TikTok profile URL
   if (platform === "TikTok" && isTikTokProfileUrl(url)) {
     return await analyzeTikTokProfile(url, onProgress);
@@ -1152,7 +1191,7 @@ async function analyzeVideoWithProgress(
     context += `\n※ 上記の情報のみでアドバイスを行います。\n`;
   }
 
-  return context;
+  return { context };
 }
 
 function buildSystemPrompt(
@@ -1233,6 +1272,11 @@ interface ProgressStepType {
   detail?: string;
 }
 
+interface ProfileAnalysisResult {
+  context: string; // Gemini用コンテキスト（サマリー + AI指示）
+  videoDetails: string; // 直接出力する動画詳細（15件すべて）
+}
+
 async function analyzeTikTokProfile(
   url: string,
   onProgress: (
@@ -1242,8 +1286,9 @@ async function analyzeTikTokProfile(
     total?: number,
     steps?: ProgressStepType[],
   ) => void,
-): Promise<string> {
+): Promise<ProfileAnalysisResult> {
   let context = "";
+  let videoDetails = "";
   const errors: string[] = [];
 
   // ステップ管理
@@ -1303,8 +1348,13 @@ async function analyzeTikTokProfile(
       // 4. 定性分析プロンプト生成
       context += generateQualitativePrompt(analysisResults);
 
-      // 5. 動画ランキング生成
-      context += generateVideoRanking(userVideos.videos, analysisResults);
+      // 5. 動画ランキング生成（Top3 + Worst1をコンテキストに、全動画詳細は直接出力用）
+      const { ranking, videoDetails: allVideoDetails } = generateVideoRanking(
+        userVideos.videos,
+        analysisResults,
+      );
+      context += ranking;
+      videoDetails = allVideoDetails;
 
       // 6. AI向け指示を追加
       updateStep("analyze", "completed", `${userVideos.videos.length}件完了`);
@@ -1321,21 +1371,14 @@ async function analyzeTikTokProfile(
 2. **定性分析（3.1〜3.3）**: 表の「*AI分析*」「*AI評価*」部分を具体的な内容で置き換え
 3. **改善提案（5章）**: 優先度別に具体的なアクションを提案
 4. **次のアクション（6章）**: チェックリスト形式で実践項目を提案
-5. **全動画詳細分析**: 上記「📹 全動画詳細分析」セクションの**全${userVideos.videos.length}件すべて**について、以下を含む詳細分析を出力：
-   - 📊 現状評価（2-3行）
-   - ✅ 良い点（箇条書き）
-   - ⚠️ 改善点（箇条書き）
-   - 📝 構成案（タイムライン表）
-   - 🎤 ナレーション案
-   - 💡 次のアクション
-
-**重要**: 全${userVideos.videos.length}件の動画すべてを省略せずに出力すること。
 
 **注意**:
 - 定量データに基づいた根拠を示す
 - 業界平均比較を活用して評価する
 - 具体的な改善例を挙げる（例: 「フックを〇〇に変更」）
 - 実践可能なアクションを優先する
+
+※ 全動画の詳細分析は、このレポートの後に自動で出力されます。
 `;
 
       updateStep("report", "completed");
@@ -1367,7 +1410,7 @@ async function analyzeTikTokProfile(
     context += `\n※ URLのみでアドバイスを行います。\n`;
   }
 
-  return context;
+  return { context, videoDetails };
 }
 
 async function analyzeVideosInBatches(
